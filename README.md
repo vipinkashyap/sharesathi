@@ -20,14 +20,15 @@ A modern, mobile-first Progressive Web App (PWA) for tracking BSE (Bombay Stock 
 - Full management: create, rename, delete watchlists
 
 ### Market Overview
-- Live market pulse with SENSEX & NIFTY indices
+- Live market pulse with SENSEX, NIFTY & USD/INR
 - Top gainers and losers at a glance
 - Market status indicator (Open/Closed/Pre-market)
 
-### Investment Stories
-- "What If" calculator shows historical returns
-- See what your investment would be worth today
-- Educational insights for long-term investing
+### Time Machine
+- Interactive "What If" investment calculator
+- Pick any stock and see returns over 1, 3, 5, or 10 years
+- Visual chart showing your investment journey
+- Calculate CAGR and total returns with real historical data
 
 ### Learn Section
 - Built-in financial glossary powered by Grokipedia
@@ -92,14 +93,17 @@ src/
 ├── app/                    # Next.js App Router pages
 │   ├── api/               # API routes
 │   │   ├── chat/         # AI chat endpoint
+│   │   ├── forex/        # USD/INR exchange rate
 │   │   ├── indices/      # Market indices
 │   │   ├── learn/        # Grokipedia proxy
 │   │   ├── news/         # News RSS proxy
-│   │   └── stock/        # Stock data from Yahoo Finance
+│   │   └── stock/        # Stock data & history from Yahoo Finance
+│   ├── about/            # About ShareSathi page
 │   ├── learn/            # Learn/glossary page
 │   ├── search/           # Stock search page
 │   ├── settings/         # App settings
 │   ├── stock/[symbol]/   # Stock detail page
+│   ├── timemachine/      # What-If investment calculator
 │   └── watchlist/        # Watchlist management
 ├── components/            # React components
 │   ├── ui/               # Reusable UI components

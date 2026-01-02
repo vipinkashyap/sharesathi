@@ -12,7 +12,8 @@ import {
   Shield,
   Heart,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
@@ -37,10 +38,16 @@ const features = [
     color: 'var(--accent-blue)',
   },
   {
+    icon: Clock,
+    title: 'Time Machine',
+    description: 'See what your investment would be worth today if you had invested years ago.',
+    color: 'var(--accent-purple)',
+  },
+  {
     icon: BookOpen,
     title: 'Learn Finance',
     description: 'Built-in glossary explains market terms like P/E ratio, dividends, and more.',
-    color: 'var(--accent-purple)',
+    color: 'var(--accent-green)',
   },
   {
     icon: MessageCircle,
