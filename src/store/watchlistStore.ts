@@ -171,6 +171,15 @@ export const useWatchlistStore = create<WatchlistState>()(
     }),
     {
       name: 'sharesathi-watchlist-v2',
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        // Rename old "FIL Picks" to "Top Picks" for existing users
+        const filPicks = state.watchlists.find(w => w.name === 'FIL Picks');
+        if (filPicks) {
+          filPicks.name = 'Top Picks';
+          filPicks.id = 'top-picks';
+        }
+      },
     }
   )
 );
