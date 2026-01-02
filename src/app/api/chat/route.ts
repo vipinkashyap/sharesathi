@@ -5,8 +5,8 @@ interface ChatMessage {
   content: string;
 }
 
-// Groq API key - hardcoded for FIL's simple setup
-const GROQ_API_KEY = 'REMOVED_SECRET';
+// Groq API key from environment variable
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 
 const SYSTEM_PROMPT = `You are ShareSathi, a helpful AI assistant for Indian stock market investors.
 You help users understand their stock portfolio, market trends, and provide educational information about investing.
