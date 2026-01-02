@@ -1,4 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import allStocks from '@/data/allStocks.json';
+
+interface StockData {
+  symbol: string;
+  nseSymbol?: string;
+  shortName?: string;
+}
+
+// Get NSE symbol from BSE code
+function getNseSymbol(bseCode: string): string | null {
+  const stock = (allStocks as StockData[]).find(s => s.symbol === bseCode);
+  return stock?.nseSymbol || stock?.shortName || null;
+}
 
 export async function GET(
   request: NextRequest,
@@ -9,26 +22,32 @@ export async function GET(
   const interval = searchParams.get('interval') || '1d';
   const range = searchParams.get('range') || '5d';
 
+  // Get NSE symbol for better Yahoo Finance compatibility
+  const nseSymbol = getNseSymbol(symbol);
+
   try {
-    // Yahoo Finance uses .BO suffix for BSE stocks
-    // Try BSE first, then NSE if BSE fails
-    let response = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=${interval}&range=${range}`,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-        next: { revalidate: 60 },
-      }
-    );
+    let data;
+    let result;
 
-    let data = await response.json();
-    let result = data.chart?.result?.[0];
+    // Try NSE first (more reliable with Yahoo Finance)
+    if (nseSymbol) {
+      const response = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${nseSymbol}.NS?interval=${interval}&range=${range}`,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+          next: { revalidate: 60 },
+        }
+      );
+      data = await response.json();
+      result = data.chart?.result?.[0];
+    }
 
-    // If BSE fails or has no data, try NSE
+    // Fallback to BSE if NSE fails
     if (!result || !result.timestamp || result.timestamp.length === 0) {
-      response = await fetch(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.NS?interval=${interval}&range=${range}`,
+      const response = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=${interval}&range=${range}`,
         {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
