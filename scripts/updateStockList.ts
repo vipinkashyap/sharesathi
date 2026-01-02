@@ -5,7 +5,7 @@
  *
  * Sources:
  * - NSE: https://archives.nseindia.com/content/equities/EQUITY_L.csv (reliable)
- * - Existing data: Preserves price/market cap from your FIL's sheet
+ * - Existing data: Preserves price/market cap from existing stock data
  */
 
 import * as fs from 'fs';
@@ -93,7 +93,7 @@ async function main() {
     fs.mkdirSync(backupDir, { recursive: true });
   }
 
-  // Read existing stocks (from FIL's sheet - has price data)
+  // Read existing stocks (has price data)
   let existingStocks: Stock[] = [];
   try {
     const content = fs.readFileSync(allStocksPath, 'utf-8');
@@ -119,7 +119,7 @@ async function main() {
   // Merge: Keep ALL existing stocks (with price data) + add new from NSE
   const mergedMap = new Map<string, Stock>();
 
-  // First, add all existing stocks (they have price data from FIL's sheet)
+  // First, add all existing stocks (they have price data)
   for (const stock of existingStocks) {
     mergedMap.set(stock.symbol, stock);
   }

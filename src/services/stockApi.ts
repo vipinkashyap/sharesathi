@@ -27,7 +27,7 @@ const stocksData: Stock[] = (allStocksData as RawStockData[]).map((s) => ({
   timestamp: new Date(),
 }));
 
-// Get default watchlist symbols (from FIL's data)
+// Get default watchlist symbols
 export function getDefaultWatchlistSymbols(): string[] {
   return defaultWatchlistSymbols as string[];
 }
@@ -40,7 +40,7 @@ export function getAllStocks(): Stock[] {
 }
 
 /**
- * Get stocks with price data (from FIL's original list)
+ * Get stocks with price data
  */
 export function getStocksWithPrices(): Stock[] {
   return stocksData.filter((s) => s.price > 0);

@@ -27,7 +27,7 @@ export interface Watchlist {
   id: string;
   name: string;
   symbols: string[];
-  isDefault: boolean; // true for read-only "FIL Picks"
+  isDefault: boolean; // true for read-only "Top Picks"
   createdAt: Date;
   updatedAt: Date;
   order: number;
@@ -35,7 +35,7 @@ export interface Watchlist {
 
 export const MAX_WATCHLISTS = 10;
 export const MAX_STOCKS_PER_WATCHLIST = 50;
-export const DEFAULT_WATCHLIST_ID = 'fil-picks';
+export const DEFAULT_WATCHLIST_ID = 'top-picks';
 export const USER_WATCHLIST_ID = 'my-watchlist';
 
 export interface PricePoint {

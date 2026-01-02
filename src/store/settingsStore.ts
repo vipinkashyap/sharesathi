@@ -21,7 +21,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       theme: 'light',
       fontSize: 'large', // Default to large for older users
-      symbolFormat: 'bse', // Default to BSE codes (your FIL's preference)
+      symbolFormat: 'bse', // Default to BSE codes
 
       setTheme: (theme: Theme) => set({ theme }),
       setFontSize: (size: FontSize) => set({ fontSize: size }),

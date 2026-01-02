@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MessageCircle, Clock, ArrowRight, Sparkles, BookOpen } from 'lucide-react';
+import { MessageCircle, Clock, Info } from 'lucide-react';
 import Link from 'next/link';
 import { MarketStatus } from '@/components/MarketStatus';
 import { MarketPulse } from '@/components/MarketPulse';
@@ -9,7 +9,6 @@ import { WatchlistSection } from '@/components/WatchlistSection';
 import { TopMovers } from '@/components/TopMovers';
 import { NewsCard } from '@/components/NewsCard';
 import { ChatAssistant } from '@/components/ChatAssistant';
-import { Card } from '@/components/ui/Card';
 import { useWatchlistStore } from '@/store/watchlistStore';
 import { getStocksBySymbols, getTopGainers, getTopLosers } from '@/services/stockApi';
 import { useNews } from '@/hooks/useNews';
@@ -47,10 +46,28 @@ export default function Dashboard() {
         className="sticky top-0 z-10"
         style={{ backgroundColor: 'var(--bg-primary)' }}
       >
-        <div className="px-4 py-3">
+        <div className="px-4 py-3 flex items-center justify-between">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
             ShareSathi
           </h1>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/timemachine"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
+              style={{ backgroundColor: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}
+            >
+              <Clock size={14} />
+              Time Machine
+            </Link>
+            <Link
+              href="/about"
+              className="p-2 rounded-full"
+              style={{ backgroundColor: 'var(--bg-secondary)' }}
+              aria-label="About ShareSathi"
+            >
+              <Info size={18} style={{ color: 'var(--text-muted)' }} />
+            </Link>
+          </div>
         </div>
         <MarketStatus />
       </header>
@@ -60,65 +77,6 @@ export default function Dashboard() {
         <MarketPulse />
         <WatchlistSection stocks={watchlistStocks} watchlist={activeWatchlist} loading={loading} />
         <TopMovers gainers={gainers} losers={losers} />
-
-        {/* Quick Actions */}
-        <div className="px-4">
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            <Sparkles size={20} style={{ color: 'var(--accent-blue)' }} />
-            Explore
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Time Machine */}
-            <Link href="/timemachine">
-              <Card className="p-4 h-full hover:ring-2 hover:ring-[var(--accent-blue)] transition-all">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: 'var(--accent-blue-bg)' }}>
-                  <Clock size={20} style={{ color: 'var(--accent-blue)' }} />
-                </div>
-                <div className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  Time Machine
-                </div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  What if you invested years ago?
-                </div>
-              </Card>
-            </Link>
-
-            {/* Learn */}
-            <Link href="/learn">
-              <Card className="p-4 h-full hover:ring-2 hover:ring-[var(--accent-blue)] transition-all">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: 'var(--accent-green-bg)' }}>
-                  <BookOpen size={20} style={{ color: 'var(--accent-green)' }} />
-                </div>
-                <div className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  Learn
-                </div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Understand market terms
-                </div>
-              </Card>
-            </Link>
-
-            {/* About */}
-            <Link href="/about" className="col-span-2">
-              <Card className="p-4 hover:ring-2 hover:ring-[var(--accent-blue)] transition-all">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">📈</div>
-                    <div>
-                      <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                        About ShareSathi
-                      </div>
-                      <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        Your companion for BSE stock tracking
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowRight size={18} style={{ color: 'var(--text-muted)' }} />
-                </div>
-              </Card>
-            </Link>
-          </div>
-        </div>
 
         {/* News Section */}
         <div className="px-4">
