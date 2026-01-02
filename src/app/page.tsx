@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MessageCircle, Info } from 'lucide-react';
+import { MessageCircle, Info, Clock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { MarketStatus } from '@/components/MarketStatus';
 import { MarketPulse } from '@/components/MarketPulse';
@@ -9,7 +9,7 @@ import { WatchlistSection } from '@/components/WatchlistSection';
 import { TopMovers } from '@/components/TopMovers';
 import { NewsCard } from '@/components/NewsCard';
 import { ChatAssistant } from '@/components/ChatAssistant';
-import { WhatIfMini } from '@/components/WhatIfCard';
+import { Card } from '@/components/ui/Card';
 import { useWatchlistStore } from '@/store/watchlistStore';
 import { getStocksBySymbols, getTopGainers, getTopLosers } from '@/services/stockApi';
 import { useNews } from '@/hooks/useNews';
@@ -68,9 +68,28 @@ export default function Dashboard() {
         <WatchlistSection stocks={watchlistStocks} watchlist={activeWatchlist} loading={loading} />
         <TopMovers gainers={gainers} losers={losers} />
 
-        {/* Investment Story */}
+        {/* Time Machine Card */}
         <div className="px-4">
-          <WhatIfMini />
+          <Link href="/timemachine">
+            <Card className="p-4 border-2 hover:border-[var(--accent-blue)] transition-colors" style={{ borderColor: 'var(--accent-blue-bg)' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent-blue-bg)' }}>
+                    <Clock size={20} style={{ color: 'var(--accent-blue)' }} />
+                  </div>
+                  <div>
+                    <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      Time Machine
+                    </div>
+                    <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      What if you invested 5 years ago?
+                    </div>
+                  </div>
+                </div>
+                <ArrowRight size={20} style={{ color: 'var(--text-muted)' }} />
+              </div>
+            </Card>
+          </Link>
         </div>
 
         {/* News Section */}
