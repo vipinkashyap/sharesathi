@@ -44,14 +44,6 @@ export function formatMarketCap(crores: number): string {
 }
 
 /**
- * Format price change with sign and percentage
- */
-export function formatChange(change: number, percent: number): string {
-  const sign = change >= 0 ? '+' : '';
-  return `${sign}₹${Math.abs(change).toFixed(2)} (${sign}${percent.toFixed(2)}%)`;
-}
-
-/**
  * Format percentage with sign
  */
 export function formatPercent(percent: number): string {

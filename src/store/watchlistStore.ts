@@ -39,7 +39,7 @@ interface WatchlistState {
 const defaultWatchlists: Watchlist[] = [
   {
     id: DEFAULT_WATCHLIST_ID,
-    name: 'FIL Picks',
+    name: 'Top Picks',
     symbols: defaultWatchlistSymbols as string[],
     isDefault: true,
     createdAt: new Date(),

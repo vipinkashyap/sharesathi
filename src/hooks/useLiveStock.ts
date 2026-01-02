@@ -61,36 +61,3 @@ export function useLiveStock(symbol: string) {
 
   return { stock, loading, error, isLive, refetch: fetchStock };
 }
-
-export function useLiveIndices() {
-  const [indices, setIndices] = useState<{
-    name: string;
-    symbol: string;
-    value: number;
-    change: number;
-    changePercent: number;
-  }[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchIndices = useCallback(async () => {
-    try {
-      const response = await fetch('/api/indices');
-
-      if (response.ok) {
-        const data = await response.json();
-        setIndices(data);
-      }
-    } catch (err) {
-      console.error('Error fetching indices:', err);
-      // Keep existing indices on error
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchIndices();
-  }, [fetchIndices]);
-
-  return { indices, loading, refetch: fetchIndices };
-}
