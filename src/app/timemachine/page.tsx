@@ -77,22 +77,36 @@ export default function TimeMachinePage() {
       .slice(0, 8);
   }, [searchQuery]);
 
+  // Track fetched periods to avoid duplicate calls
+  const [fetchedPeriod, setFetchedPeriod] = useState<string | null>(null);
+
   // Fetch historical data when stock is selected
   useEffect(() => {
     if (!selectedStock) return;
+
+    // Determine which period we need
+    const neededPeriod = selectedYears <= 5 ? '5y' : '10y';
+
+    // If we already have data for this period or a longer one, don't refetch
+    if (fetchedPeriod === '10y' || (fetchedPeriod === '5y' && neededPeriod === '5y')) {
+      // Just hide results when period changes
+      setShowResults(false);
+      return;
+    }
 
     const fetchHistory = async () => {
       setLoading(true);
       setError(null);
       setShowResults(false);
       try {
-        const period = selectedYears <= 5 ? '5y' : '10y';
-        const response = await fetch(`/api/stock/${selectedStock.symbol}/history?period=${period}`);
+        // Always fetch 10y to cover all periods
+        const response = await fetch(`/api/stock/${selectedStock.symbol}/history?period=10y`);
         if (response.ok) {
           const data = await response.json();
           const historyData = data.history || [];
           setHistory(historyData);
           setCurrentPrice(data.currentPrice || 0);
+          setFetchedPeriod('10y');
 
           if (historyData.length === 0) {
             setError('Historical data not available for this stock');
@@ -109,7 +123,7 @@ export default function TimeMachinePage() {
     };
 
     fetchHistory();
-  }, [selectedStock, selectedYears]);
+  }, [selectedStock, selectedYears, fetchedPeriod]);
 
   // Calculate investment results
   const result: CalculationResult | null = useMemo(() => {
@@ -188,6 +202,7 @@ export default function TimeMachinePage() {
     setShowResults(false);
     setError(null);
     setHistory([]);
+    setFetchedPeriod(null); // Reset so new stock fetches data
   };
 
   const handleCalculate = () => {
