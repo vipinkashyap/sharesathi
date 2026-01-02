@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MessageCircle, Clock, Info } from 'lucide-react';
+import { MessageCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { MarketStatus } from '@/components/MarketStatus';
 import { MarketPulse } from '@/components/MarketPulse';
@@ -53,19 +53,18 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <Link
               href="/timemachine"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
-              style={{ backgroundColor: 'var(--accent-blue-bg)', color: 'var(--accent-blue)' }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm"
+              style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
             >
               <Clock size={14} />
               Time Machine
             </Link>
             <Link
               href="/about"
-              className="p-2 rounded-full"
-              style={{ backgroundColor: 'var(--bg-secondary)' }}
-              aria-label="About ShareSathi"
+              className="px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm"
+              style={{ backgroundColor: 'var(--accent-green)', color: 'white' }}
             >
-              <Info size={18} style={{ color: 'var(--text-muted)' }} />
+              About
             </Link>
           </div>
         </div>
