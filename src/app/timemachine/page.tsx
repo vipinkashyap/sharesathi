@@ -61,6 +61,7 @@ export default function TimeMachinePage() {
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Search stocks
   const searchResults = useMemo(() => {
@@ -82,16 +83,26 @@ export default function TimeMachinePage() {
 
     const fetchHistory = async () => {
       setLoading(true);
+      setError(null);
+      setShowResults(false);
       try {
         const period = selectedYears <= 5 ? '5y' : '10y';
         const response = await fetch(`/api/stock/${selectedStock.symbol}/history?period=${period}`);
         if (response.ok) {
           const data = await response.json();
-          setHistory(data.history || []);
+          const historyData = data.history || [];
+          setHistory(historyData);
           setCurrentPrice(data.currentPrice || 0);
+
+          if (historyData.length === 0) {
+            setError('Historical data not available for this stock');
+          }
+        } else {
+          setError('Failed to fetch historical data');
         }
-      } catch (error) {
-        console.error('Error fetching history:', error);
+      } catch (err) {
+        console.error('Error fetching history:', err);
+        setError('Failed to fetch historical data');
       } finally {
         setLoading(false);
       }
@@ -175,6 +186,8 @@ export default function TimeMachinePage() {
     setSearchQuery('');
     setShowSearch(false);
     setShowResults(false);
+    setError(null);
+    setHistory([]);
   };
 
   const handleCalculate = () => {
@@ -367,29 +380,42 @@ export default function TimeMachinePage() {
           </section>
         )}
 
-        {/* Calculate Button */}
+        {/* Calculate Button or Error */}
         {selectedStock && !showResults && (
-          <button
-            onClick={handleCalculate}
-            disabled={loading || !history.length}
-            className="w-full py-4 rounded-xl text-lg font-semibold flex items-center justify-center gap-2 transition-colors"
-            style={{
-              backgroundColor: loading ? 'var(--bg-secondary)' : 'var(--accent-blue)',
-              color: loading ? 'var(--text-muted)' : 'white',
-            }}
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-                Loading...
-              </>
+          <>
+            {error ? (
+              <Card className="p-4 text-center" style={{ backgroundColor: 'var(--accent-red-bg)' }}>
+                <p className="text-sm" style={{ color: 'var(--accent-red)' }}>
+                  {error}
+                </p>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                  Try selecting a different stock
+                </p>
+              </Card>
             ) : (
-              <>
-                <Sparkles size={20} />
-                See What Would Have Happened
-              </>
+              <button
+                onClick={handleCalculate}
+                disabled={loading || !history.length}
+                className="w-full py-4 rounded-xl text-lg font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                style={{
+                  backgroundColor: loading || !history.length ? 'var(--bg-secondary)' : 'var(--accent-blue)',
+                  color: loading || !history.length ? 'var(--text-muted)' : 'white',
+                }}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full" />
+                    Loading historical data...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={20} />
+                    See What Would Have Happened
+                  </>
+                )}
+              </button>
             )}
-          </button>
+          </>
         )}
 
         {/* Results */}

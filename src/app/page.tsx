@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MessageCircle, Info, Clock, ArrowRight } from 'lucide-react';
+import { MessageCircle, Clock, ArrowRight, Sparkles, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { MarketStatus } from '@/components/MarketStatus';
 import { MarketPulse } from '@/components/MarketPulse';
@@ -47,17 +47,10 @@ export default function Dashboard() {
         className="sticky top-0 z-10"
         style={{ backgroundColor: 'var(--bg-primary)' }}
       >
-        <div className="px-4 py-3 flex items-center justify-between">
+        <div className="px-4 py-3">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
             ShareSathi
           </h1>
-          <Link
-            href="/about"
-            className="p-2 rounded-full hover:bg-bg-secondary transition-colors"
-            aria-label="About ShareSathi"
-          >
-            <Info size={22} style={{ color: 'var(--text-muted)' }} />
-          </Link>
         </div>
         <MarketStatus />
       </header>
@@ -68,28 +61,63 @@ export default function Dashboard() {
         <WatchlistSection stocks={watchlistStocks} watchlist={activeWatchlist} loading={loading} />
         <TopMovers gainers={gainers} losers={losers} />
 
-        {/* Time Machine Card */}
+        {/* Quick Actions */}
         <div className="px-4">
-          <Link href="/timemachine">
-            <Card className="p-4 border-2 hover:border-[var(--accent-blue)] transition-colors" style={{ borderColor: 'var(--accent-blue-bg)' }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent-blue-bg)' }}>
-                    <Clock size={20} style={{ color: 'var(--accent-blue)' }} />
-                  </div>
-                  <div>
-                    <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      Time Machine
-                    </div>
-                    <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      What if you invested 5 years ago?
-                    </div>
-                  </div>
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <Sparkles size={20} style={{ color: 'var(--accent-blue)' }} />
+            Explore
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Time Machine */}
+            <Link href="/timemachine">
+              <Card className="p-4 h-full hover:ring-2 hover:ring-[var(--accent-blue)] transition-all">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: 'var(--accent-blue-bg)' }}>
+                  <Clock size={20} style={{ color: 'var(--accent-blue)' }} />
                 </div>
-                <ArrowRight size={20} style={{ color: 'var(--text-muted)' }} />
-              </div>
-            </Card>
-          </Link>
+                <div className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Time Machine
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  What if you invested years ago?
+                </div>
+              </Card>
+            </Link>
+
+            {/* Learn */}
+            <Link href="/learn">
+              <Card className="p-4 h-full hover:ring-2 hover:ring-[var(--accent-blue)] transition-all">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: 'var(--accent-green-bg)' }}>
+                  <BookOpen size={20} style={{ color: 'var(--accent-green)' }} />
+                </div>
+                <div className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Learn
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Understand market terms
+                </div>
+              </Card>
+            </Link>
+
+            {/* About */}
+            <Link href="/about" className="col-span-2">
+              <Card className="p-4 hover:ring-2 hover:ring-[var(--accent-blue)] transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">📈</div>
+                    <div>
+                      <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        About ShareSathi
+                      </div>
+                      <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        Your companion for BSE stock tracking
+                      </div>
+                    </div>
+                  </div>
+                  <ArrowRight size={18} style={{ color: 'var(--text-muted)' }} />
+                </div>
+              </Card>
+            </Link>
+          </div>
         </div>
 
         {/* News Section */}
