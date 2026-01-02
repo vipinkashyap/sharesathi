@@ -1,5 +1,9 @@
 # ShareSathi - Your Stock Companion
 
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://sharesathi.vercel.app/)
+
+**[Try it live: sharesathi.vercel.app](https://sharesathi.vercel.app/)**
+
 A modern, mobile-first Progressive Web App (PWA) for tracking BSE (Bombay Stock Exchange) stocks. Built with Next.js 15 and designed for the Indian retail investor.
 
 ## Features
