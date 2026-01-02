@@ -13,6 +13,70 @@ interface ArticleData {
   references: { number: number; url: string }[];
 }
 
+// Clean up and format article content from Grokipedia
+function formatArticleContent(content: string): string[] {
+  // Patterns to filter out (metadata, timestamps, etc.)
+  const filterPatterns = [
+    /^fact-checked by/i,
+    /^last (month|week|year|day)/i,
+    /^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i,
+    /^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i,
+    /^(today|yesterday)/i,
+    /^\s*[-–—]\s*$/,
+    /^\.$/,
+  ];
+
+  // Split by newlines and filter
+  const lines = content.split('\n').filter(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return false;
+    if (trimmed.length < 3) return false;
+    return !filterPatterns.some(pattern => pattern.test(trimmed));
+  });
+
+  // Merge short consecutive lines into paragraphs
+  const paragraphs: string[] = [];
+  let currentParagraph = '';
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // If line ends with sentence-ending punctuation and is substantial, it might be a complete thought
+    const endsWithPunctuation = /[.!?]$/.test(trimmed);
+    const isSubstantial = trimmed.length > 100;
+
+    if (currentParagraph) {
+      currentParagraph += ' ' + trimmed;
+    } else {
+      currentParagraph = trimmed;
+    }
+
+    // Create a new paragraph if we have a substantial complete sentence
+    if (endsWithPunctuation && currentParagraph.length > 150) {
+      paragraphs.push(currentParagraph);
+      currentParagraph = '';
+    }
+  }
+
+  // Don't forget the last paragraph
+  if (currentParagraph.trim()) {
+    paragraphs.push(currentParagraph);
+  }
+
+  // If we ended up with too few paragraphs, try a different approach
+  if (paragraphs.length < 3 && content.length > 500) {
+    // Fall back to splitting by double newlines or periods followed by capital letters
+    return content
+      .replace(/\n+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .split(/(?<=[.!?])\s+(?=[A-Z])/)
+      .filter(p => p.trim().length > 50)
+      .slice(0, 15);
+  }
+
+  return paragraphs.slice(0, 15);
+}
+
 // Common finance/stock market terms for quick access
 const suggestedTerms = [
   { term: 'Stock_market', label: 'Stock Market' },
@@ -190,20 +254,11 @@ export default function LearnPage() {
               className="text-sm leading-relaxed space-y-4"
               style={{ color: 'var(--text-secondary)' }}
             >
-              {article.content
-                .split(/\n\n+/)
-                .filter(p => p.trim())
-                .slice(0, 20)
-                .map((paragraph, idx) => (
-                  <p key={idx} className="whitespace-pre-wrap">
-                    {paragraph.trim().replace(/\n/g, ' ')}
-                  </p>
-                ))}
-              {article.content.split(/\n\n+/).length > 20 && (
-                <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>
-                  Article truncated for readability...
+              {formatArticleContent(article.content).map((paragraph, idx) => (
+                <p key={idx}>
+                  {paragraph}
                 </p>
-              )}
+              ))}
             </div>
 
             {/* References */}
