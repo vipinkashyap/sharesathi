@@ -1,0 +1,189 @@
+@import "tailwindcss";
+
+:root {
+  /* Light Theme */
+  --bg-primary: #FAFAFA;
+  --bg-card: #FFFFFF;
+  --bg-secondary: #F5F5F5;
+  --text-primary: #1A1A1A;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --accent-green: #0D9F4F;
+  --accent-green-bg: #E6F7ED;
+  --accent-red: #D93025;
+  --accent-red-bg: #FCE8E6;
+  --accent-blue: #1A73E8;
+  --accent-blue-bg: #E8F0FE;
+  --border: #E5E5E5;
+  --shadow: rgba(0, 0, 0, 0.08);
+}
+
+.dark {
+  --bg-primary: #121212;
+  --bg-card: #1E1E1E;
+  --bg-secondary: #2A2A2A;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0A0;
+  --text-muted: #666666;
+  --accent-green: #34D399;
+  --accent-green-bg: #064E3B;
+  --accent-red: #F87171;
+  --accent-red-bg: #7F1D1D;
+  --accent-blue: #60A5FA;
+  --accent-blue-bg: #1E3A5F;
+  --border: #333333;
+  --shadow: rgba(0, 0, 0, 0.3);
+}
+
+@theme inline {
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-card: var(--bg-card);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent-green: var(--accent-green);
+  --color-accent-green-bg: var(--accent-green-bg);
+  --color-accent-red: var(--accent-red);
+  --color-accent-red-bg: var(--accent-red-bg);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-blue-bg: var(--accent-blue-bg);
+  --color-border: var(--border);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+html.font-large {
+  font-size: 18px;
+}
+
+html.font-extra-large {
+  font-size: 20px;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Price update animation */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.price-update {
+  animation: pulse 0.3s ease-out;
+}
+
+/* Page transition */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: slideIn 0.2s ease-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Touch targets - minimum 44px */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Stock change colors */
+.text-gain {
+  color: var(--accent-green);
+}
+
+.text-loss {
+  color: var(--accent-red);
+}
+
+.bg-gain {
+  background-color: var(--accent-green-bg);
+}
+
+.bg-loss {
+  background-color: var(--accent-red-bg);
+}
+
+/* Safe area for mobile bottom nav */
+.pb-safe {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+
+/* Card styles */
+.card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+/* Pull to refresh indicator */
+.pull-indicator {
+  transition: transform 0.2s ease;
+}
+
+/* Chat modal slide up animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

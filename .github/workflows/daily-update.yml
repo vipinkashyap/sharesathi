@@ -1,0 +1,45 @@
+name: Daily Stock Update
+
+on:
+  schedule:
+    # Run at 6 AM IST (00:30 UTC) every day - before market opens
+    - cron: '30 0 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update stock list
+        run: npm run update-stocks
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --quiet src/data/allStocks.json || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push if changed
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add src/data/allStocks.json
+          git commit -m "chore: update stock list $(date +'%Y-%m-%d')"
+          git push
+
+      - name: Trigger Vercel deploy
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          echo "Stock data updated. Vercel will auto-deploy from the push."
