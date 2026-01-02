@@ -127,20 +127,20 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* Header - Mobile: 4 cols, Desktop: 6 cols */}
       <div
-        className="grid grid-cols-12 gap-2 px-4 py-3 border-b sticky top-0 z-10"
+        className="grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_auto_auto_auto_auto] gap-2 sm:gap-4 px-3 sm:px-4 py-3 border-b sticky top-0 z-10"
         style={{
           backgroundColor: 'var(--bg-card)',
           borderColor: 'var(--border)'
         }}
       >
-        <div className="col-span-1"></div>
-        <SortHeader label="Stock" sortKeyName="shortName" className="col-span-3 justify-start" />
-        <SortHeader label="Price" sortKeyName="price" className="col-span-2 justify-end" />
-        <SortHeader label="Change" sortKeyName="changePercent" className="col-span-2 justify-end" />
-        <SortHeader label="Volume" sortKeyName="volume" className="col-span-2 justify-end hidden sm:flex" />
-        <SortHeader label="MCap" sortKeyName="marketCap" className="col-span-2 justify-end" />
+        <div className="w-8"></div>
+        <SortHeader label="Stock" sortKeyName="shortName" className="justify-start" />
+        <SortHeader label="Price" sortKeyName="price" className="justify-end" />
+        <SortHeader label="Chg" sortKeyName="changePercent" className="justify-end" />
+        <SortHeader label="Vol" sortKeyName="volume" className="justify-end hidden sm:flex" />
+        <SortHeader label="MCap" sortKeyName="marketCap" className="justify-end hidden sm:flex" />
       </div>
 
       {/* Virtual scrolling container */}
@@ -160,7 +160,7 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
                 <Link
                   key={stock.symbol}
                   href={`/stock/${stock.symbol}`}
-                  className="grid grid-cols-12 gap-2 px-4 items-center border-b hover:bg-opacity-50 transition-colors"
+                  className="grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_auto_auto_auto_auto] gap-2 sm:gap-4 px-3 sm:px-4 items-center border-b hover:bg-opacity-50 transition-colors"
                   style={{
                     height: ROW_HEIGHT,
                     borderColor: 'var(--border)',
@@ -170,7 +170,7 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   {/* Watchlist star */}
-                  <div className="col-span-1 flex justify-center">
+                  <div className="w-8 flex justify-center">
                     <button
                       onClick={(e) => toggleWatchlist(stock.symbol, e)}
                       className="p-1 rounded-full hover:bg-opacity-20 transition-colors"
@@ -183,24 +183,24 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
                   </div>
 
                   {/* Stock name */}
-                  <div className="col-span-3 truncate">
-                    <div className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                       {stock.shortName}
                     </div>
-                    <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                    <div className="text-xs truncate hidden xs:block" style={{ color: 'var(--text-muted)' }}>
                       {stock.name}
                     </div>
                   </div>
 
                   {/* Price */}
-                  <div className="col-span-2 text-right">
+                  <div className="text-right whitespace-nowrap">
                     <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
                       {formatPrice(stock.price)}
                     </span>
                   </div>
 
                   {/* Change */}
-                  <div className="col-span-2 text-right">
+                  <div className="text-right whitespace-nowrap">
                     <span
                       className="font-semibold text-sm"
                       style={{ color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}
@@ -210,14 +210,14 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
                   </div>
 
                   {/* Volume - hidden on mobile */}
-                  <div className="col-span-2 text-right hidden sm:block">
+                  <div className="text-right whitespace-nowrap hidden sm:block">
                     <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                       {stock.volume ? formatVolume(stock.volume) : '-'}
                     </span>
                   </div>
 
-                  {/* Market Cap */}
-                  <div className="col-span-2 text-right">
+                  {/* Market Cap - hidden on mobile */}
+                  <div className="text-right whitespace-nowrap hidden sm:block">
                     <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                       {stock.marketCap > 0 ? formatMarketCap(stock.marketCap) : '-'}
                     </span>
