@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings, Sun, Moon, Type, Trash2, Download, Heart, Database } from 'lucide-react';
+import { Settings, Sun, Moon, Type, Trash2, Download, Heart, Database, Info, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useWatchlistStore } from '@/store/watchlistStore';
 import { Card } from '@/components/ui/Card';
@@ -205,20 +206,26 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
             About
           </h2>
-          <Card className="text-center py-6">
-            <h3 className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-              ShareSathi
-            </h3>
-            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-              Version 1.0.0
-            </p>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Stock data powered by Yahoo Finance
-            </p>
-            <p className="text-sm flex items-center justify-center gap-1 mt-2" style={{ color: 'var(--text-muted)' }}>
-              Made with <Heart size={14} className="text-red-500 fill-red-500" /> for family
-            </p>
+          <Card>
+            <Link
+              href="/about"
+              className="flex items-center justify-between py-3"
+            >
+              <div className="flex items-center gap-3">
+                <Info size={20} style={{ color: 'var(--text-secondary)' }} />
+                <div>
+                  <span style={{ color: 'var(--text-primary)' }}>About ShareSathi</span>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Version 1.0.0
+                  </p>
+                </div>
+              </div>
+              <ChevronRight size={20} style={{ color: 'var(--text-muted)' }} />
+            </Link>
           </Card>
+          <p className="text-xs mt-3 text-center" style={{ color: 'var(--text-muted)' }}>
+            Made with <Heart size={12} className="inline text-red-500 fill-red-500" /> for family
+          </p>
         </section>
       </div>
     </div>

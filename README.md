@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ShareSathi - Your Stock Companion
+
+A modern, mobile-first Progressive Web App (PWA) for tracking BSE (Bombay Stock Exchange) stocks. Built with Next.js 15 and designed for the Indian retail investor.
+
+## Features
+
+### Real-Time Stock Tracking
+- Live price updates via Yahoo Finance API
+- Interactive price charts with multiple timeframes (1D, 1W, 1M, 3M, 1Y)
+- Key metrics: Market Cap, P/E Ratio, 52-week High/Low, Volume
+
+### Multiple Watchlists
+- Create up to 10 custom watchlists
+- Add up to 50 stocks per watchlist
+- Curated "Top Picks" watchlist included
+- Full management: create, rename, delete watchlists
+
+### Market Overview
+- Live market pulse with SENSEX & NIFTY indices
+- Top gainers and losers at a glance
+- Market status indicator (Open/Closed/Pre-market)
+
+### Investment Stories
+- "What If" calculator shows historical returns
+- See what your investment would be worth today
+- Educational insights for long-term investing
+
+### Learn Section
+- Built-in financial glossary powered by Grokipedia
+- Search any stock market term
+- Quick access to common concepts (P/E ratio, Market Cap, IPO, etc.)
+
+### AI Chat Assistant
+- Ask questions about your portfolio
+- Get insights about market trends
+- Powered by Groq's LLM API
+
+### Latest News
+- Curated financial news from Google News RSS
+- Stock-specific news on detail pages
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS with CSS Variables for theming
+- **State Management**: Zustand with localStorage persistence
+- **Icons**: Lucide React
+- **Charts**: Recharts
+- **PWA**: Web Manifest + Standalone mode
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/vipinkashyap/sharesathi.git
+cd sharesathi
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Add your GROQ_API_KEY for the AI chat feature
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GROQ_API_KEY` | API key for Groq LLM (AI chat) | Optional |
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── api/               # API routes
+│   │   ├── chat/         # AI chat endpoint
+│   │   ├── indices/      # Market indices
+│   │   ├── learn/        # Grokipedia proxy
+│   │   ├── news/         # News RSS proxy
+│   │   └── stock/        # Stock data from Yahoo Finance
+│   ├── learn/            # Learn/glossary page
+│   ├── search/           # Stock search page
+│   ├── settings/         # App settings
+│   ├── stock/[symbol]/   # Stock detail page
+│   └── watchlist/        # Watchlist management
+├── components/            # React components
+│   ├── ui/               # Reusable UI components
+│   └── ...               # Feature components
+├── data/                  # Static data files
+├── hooks/                 # Custom React hooks
+├── lib/                   # Utility functions
+├── services/              # API service functions
+├── store/                 # Zustand stores
+└── types/                 # TypeScript types
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Features in Detail
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### PWA Support
+Install ShareSathi on your phone for a native app experience:
+- Add to Home Screen on iOS/Android
+- Works offline with cached data
+- Fast, app-like navigation
 
-## Deploy on Vercel
+### Theme Support
+- Light and Dark mode
+- Adjustable font sizes (Normal, Large, Extra Large)
+- Accessible color contrasts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Data Management
+- Export watchlists as JSON
+- Clear cache without losing watchlists
+- All data stored locally in browser
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is private and for personal/family use.
+
+## Acknowledgments
+
+- Stock data from Yahoo Finance
+- Financial glossary powered by Grokipedia
+- News from Google News RSS
+- AI powered by Groq
+
+---
+
+Made with love for family

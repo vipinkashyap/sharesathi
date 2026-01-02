@@ -2,13 +2,14 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Search, Star, Settings } from 'lucide-react';
+import { Home, Search, Star, BookOpen, Settings } from 'lucide-react';
 
-// Simple 4-item navigation - same for mobile and desktop
+// 5-item navigation - same for mobile and desktop
 const navItems = [
   { href: '/', icon: Home, label: 'Home' },
   { href: '/watchlist', icon: Star, label: 'Watchlist' },
   { href: '/search', icon: Search, label: 'Search' },
+  { href: '/learn', icon: BookOpen, label: 'Learn' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
@@ -82,12 +83,12 @@ export function Navigation() {
               <Link
                 key={href}
                 href={href}
-                className="flex flex-col items-center justify-center gap-1 touch-target px-4 py-2 rounded-lg transition-colors"
+                className="flex flex-col items-center justify-center gap-0.5 touch-target px-2 py-2 rounded-lg transition-colors"
                 style={{
                   color: isActive ? 'var(--accent-blue)' : 'var(--text-muted)',
                 }}
               >
-                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                 <span className="text-xs font-medium">{label}</span>
               </Link>
             );
