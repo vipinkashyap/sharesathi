@@ -1,23 +1,27 @@
 'use client';
 
-import { Star, Plus } from 'lucide-react';
+import { Star, Plus, Lock } from 'lucide-react';
 import Link from 'next/link';
-import { Stock } from '@/types';
+import { Stock, Watchlist } from '@/types';
 import { StockCard } from '@/components/StockCard';
 import { Card } from '@/components/ui/Card';
 
 interface WatchlistSectionProps {
   stocks: Stock[];
+  watchlist?: Watchlist;
   loading?: boolean;
 }
 
-export function WatchlistSection({ stocks, loading = false }: WatchlistSectionProps) {
+export function WatchlistSection({ stocks, watchlist, loading = false }: WatchlistSectionProps) {
+  const watchlistName = watchlist?.name || 'My Watchlist';
+  const isReadOnly = watchlist?.isDefault || false;
+
   if (loading) {
     return (
       <div className="px-4">
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
           <Star size={20} style={{ color: 'var(--accent-blue)' }} />
-          My Watchlist
+          {watchlistName}
         </h2>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -44,24 +48,29 @@ export function WatchlistSection({ stocks, loading = false }: WatchlistSectionPr
       <div className="px-4">
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
           <Star size={20} style={{ color: 'var(--accent-blue)' }} />
-          My Watchlist
+          {watchlistName}
+          {isReadOnly && <Lock size={14} className="text-gray-400" />}
         </h2>
         <Card className="py-10 text-center">
           <Star size={48} className="mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
           <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-            Your watchlist is empty
+            {watchlistName} is empty
           </h3>
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Add your favorite stocks to track them here
+            {isReadOnly
+              ? 'This is a read-only watchlist'
+              : 'Add your favorite stocks to track them here'}
           </p>
-          <Link
-            href="/search"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium touch-target"
-            style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
-          >
-            <Plus size={18} />
-            Add First Stock
-          </Link>
+          {!isReadOnly && (
+            <Link
+              href="/search"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium touch-target"
+              style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+            >
+              <Plus size={18} />
+              Add First Stock
+            </Link>
+          )}
         </Card>
       </div>
     );
@@ -72,7 +81,8 @@ export function WatchlistSection({ stocks, loading = false }: WatchlistSectionPr
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
           <Star size={20} style={{ color: 'var(--accent-blue)' }} />
-          My Watchlist ({stocks.length})
+          {watchlistName} ({stocks.length})
+          {isReadOnly && <Lock size={14} className="text-gray-400" />}
         </h2>
         <Link
           href="/watchlist"

@@ -15,7 +15,10 @@ import { useNews } from '@/hooks/useNews';
 import { Stock } from '@/types';
 
 export default function Dashboard() {
-  const { symbols } = useWatchlistStore();
+  const watchlists = useWatchlistStore((state) => state.watchlists);
+  const activeWatchlistId = useWatchlistStore((state) => state.activeWatchlistId);
+  const activeWatchlist = watchlists.find((w) => w.id === activeWatchlistId);
+
   const [watchlistStocks, setWatchlistStocks] = useState<Stock[]>([]);
   const [gainers, setGainers] = useState<Stock[]>([]);
   const [losers, setLosers] = useState<Stock[]>([]);
@@ -24,13 +27,17 @@ export default function Dashboard() {
   const { news, loading: newsLoading } = useNews();
 
   useEffect(() => {
-    // Load stock data
-    const stocks = getStocksBySymbols(symbols);
-    setWatchlistStocks(stocks);
+    // Load stock data for active watchlist
+    if (activeWatchlist) {
+      const stocks = getStocksBySymbols(activeWatchlist.symbols);
+      setWatchlistStocks(stocks);
+    } else {
+      setWatchlistStocks([]);
+    }
     setGainers(getTopGainers(5));
     setLosers(getTopLosers(5));
     setLoading(false);
-  }, [symbols]);
+  }, [activeWatchlist]);
 
   return (
     <div className="page-enter">
@@ -50,7 +57,7 @@ export default function Dashboard() {
       {/* Content */}
       <div className="space-y-6 pb-6">
         <MarketPulse />
-        <WatchlistSection stocks={watchlistStocks} loading={loading} />
+        <WatchlistSection stocks={watchlistStocks} watchlist={activeWatchlist} loading={loading} />
         <TopMovers gainers={gainers} losers={losers} />
 
         {/* Investment Story */}

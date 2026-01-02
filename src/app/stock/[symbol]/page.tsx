@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Star, RefreshCw } from 'lucide-react';
 import { useWatchlistStore } from '@/store/watchlistStore';
@@ -11,6 +12,7 @@ import { NewsCard } from '@/components/NewsCard';
 import { WhatIfCard } from '@/components/WhatIfCard';
 import { Card } from '@/components/ui/Card';
 import { formatPrice, formatMarketCap, formatVolume } from '@/lib/formatters';
+import WatchlistPickerModal from '@/components/WatchlistPickerModal';
 
 export default function StockDetailPage() {
   const params = useParams();
@@ -20,15 +22,12 @@ export default function StockDetailPage() {
   const { stock, loading, isLive, refetch } = useLiveStock(symbol);
   const { news, loading: newsLoading } = useNews(stock?.name || symbol);
 
-  const { isInWatchlist, addStock, removeStock } = useWatchlistStore();
-  const inWatchlist = isInWatchlist(symbol);
+  const { isInAnyWatchlist } = useWatchlistStore();
+  const inAnyWatchlist = isInAnyWatchlist(symbol);
+  const [showPicker, setShowPicker] = useState(false);
 
   const handleWatchlistClick = () => {
-    if (inWatchlist) {
-      removeStock(symbol);
-    } else {
-      addStock(symbol);
-    }
+    setShowPicker(true);
   };
 
   if (loading) {
@@ -99,12 +98,12 @@ export default function StockDetailPage() {
           <button
             onClick={handleWatchlistClick}
             className="touch-target p-2 rounded-full hover:bg-[var(--bg-secondary)]"
-            aria-label={inWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
+            aria-label={inAnyWatchlist ? 'Manage watchlists' : 'Add to watchlist'}
           >
             <Star
               size={24}
-              className={inWatchlist ? 'fill-yellow-400 text-yellow-400' : ''}
-              style={{ color: inWatchlist ? undefined : 'var(--text-muted)' }}
+              className={inAnyWatchlist ? 'fill-yellow-400 text-yellow-400' : ''}
+              style={{ color: inAnyWatchlist ? undefined : 'var(--text-muted)' }}
             />
           </button>
         </div>
@@ -192,6 +191,14 @@ export default function StockDetailPage() {
 
       {/* Bottom spacing */}
       <div className="h-8" />
+
+      {/* Watchlist Picker Modal */}
+      <WatchlistPickerModal
+        isOpen={showPicker}
+        onClose={() => setShowPicker(false)}
+        stockSymbol={symbol}
+        stockName={stock.name}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Star, Plus, X } from 'lucide-react';
+import { Star, Plus, X, Settings2, Lock } from 'lucide-react';
 import { Stock } from '@/types';
 import { getStocksBySymbols } from '@/services/stockApi';
 import { useWatchlistStore } from '@/store/watchlistStore';
@@ -10,18 +10,38 @@ import { formatPrice, formatPercent } from '@/lib/formatters';
 import { Card } from '@/components/ui/Card';
 import { WatchlistMetrics } from '@/components/WatchlistMetrics';
 import { useRouter } from 'next/navigation';
+import WatchlistSelector from '@/components/WatchlistSelector';
+import CreateWatchlistModal from '@/components/CreateWatchlistModal';
+import WatchlistManager from '@/components/WatchlistManager';
 
 export default function WatchlistPage() {
   const router = useRouter();
-  const { symbols, removeStock } = useWatchlistStore();
+  const watchlists = useWatchlistStore((state) => state.watchlists);
+  const activeWatchlistId = useWatchlistStore((state) => state.activeWatchlistId);
+  const setActiveWatchlist = useWatchlistStore((state) => state.setActiveWatchlist);
+  const removeStock = useWatchlistStore((state) => state.removeStock);
+
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showManagerModal, setShowManagerModal] = useState(false);
+
+  const activeWatchlist = watchlists.find((w) => w.id === activeWatchlistId);
+  const isReadOnly = activeWatchlist?.isDefault || false;
 
   useEffect(() => {
-    const stockData = getStocksBySymbols(symbols);
-    setStocks(stockData);
+    if (activeWatchlist) {
+      const stockData = getStocksBySymbols(activeWatchlist.symbols);
+      setStocks(stockData);
+    } else {
+      setStocks([]);
+    }
     setLoading(false);
-  }, [symbols]);
+  }, [activeWatchlist]);
+
+  const handleWatchlistCreated = (id: string) => {
+    setActiveWatchlist(id);
+  };
 
   return (
     <div className="page-enter">
@@ -32,21 +52,50 @@ export default function WatchlistPage() {
       >
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            My Watchlist
+            My Watchlists
           </h1>
-          <Link
-            href="/search"
-            className="touch-target flex items-center gap-1.5 px-3 py-2 rounded-lg"
-            style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
-          >
-            <Plus size={18} />
-            <span className="text-sm font-medium">Add</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowManagerModal(true)}
+              className="touch-target flex items-center justify-center p-2 rounded-lg"
+              style={{ backgroundColor: 'var(--bg-secondary)' }}
+              aria-label="Manage watchlists"
+            >
+              <Settings2 size={20} style={{ color: 'var(--text-secondary)' }} />
+            </button>
+            <Link
+              href="/search"
+              className="touch-target flex items-center gap-1.5 px-3 py-2 rounded-lg"
+              style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+            >
+              <Plus size={18} />
+              <span className="text-sm font-medium">Add</span>
+            </Link>
+          </div>
         </div>
-        {stocks.length > 0 && (
-          <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
-            {stocks.length} stock{stocks.length > 1 ? 's' : ''} in your watchlist
-          </p>
+
+        {/* Watchlist Tabs */}
+        <div className="mt-3">
+          <WatchlistSelector
+            watchlists={watchlists}
+            activeWatchlistId={activeWatchlistId}
+            onSelect={setActiveWatchlist}
+            onCreate={() => setShowCreateModal(true)}
+          />
+        </div>
+
+        {activeWatchlist && stocks.length > 0 && (
+          <div className="flex items-center gap-2 mt-2">
+            {isReadOnly && (
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                <Lock size={10} />
+                Read-only
+              </span>
+            )}
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {stocks.length} stock{stocks.length > 1 ? 's' : ''}
+            </p>
+          </div>
         )}
       </header>
 
@@ -80,19 +129,23 @@ export default function WatchlistPage() {
           <Card className="py-10 text-center">
             <Star size={48} className="mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
             <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-              Your watchlist is empty
+              {activeWatchlist?.name || 'Watchlist'} is empty
             </h3>
             <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-              Add your favorite stocks to track them here
+              {isReadOnly
+                ? 'This is a read-only watchlist'
+                : 'Add your favorite stocks to track them here'}
             </p>
-            <Link
-              href="/search"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium touch-target"
-              style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
-            >
-              <Plus size={18} />
-              Add First Stock
-            </Link>
+            {!isReadOnly && (
+              <Link
+                href="/search"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium touch-target"
+                style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+              >
+                <Plus size={18} />
+                Add First Stock
+              </Link>
+            )}
           </Card>
         ) : (
           <div
@@ -135,21 +188,34 @@ export default function WatchlistPage() {
                     </div>
                   </div>
 
-                  {/* Remove button - separate from clickable area */}
-                  <button
-                    onClick={() => removeStock(stock.symbol)}
-                    className="touch-target flex items-center justify-center px-3 py-4 border-l hover:bg-[var(--accent-red-bg)] transition-colors"
-                    style={{ borderColor: 'var(--border)' }}
-                    aria-label={`Remove ${stock.shortName} from watchlist`}
-                  >
-                    <X size={18} style={{ color: 'var(--accent-red)' }} />
-                  </button>
+                  {/* Remove button - only for editable watchlists */}
+                  {!isReadOnly && (
+                    <button
+                      onClick={() => removeStock(stock.symbol, activeWatchlistId)}
+                      className="touch-target flex items-center justify-center px-3 py-4 border-l hover:bg-[var(--accent-red-bg)] transition-colors"
+                      style={{ borderColor: 'var(--border)' }}
+                      aria-label={`Remove ${stock.shortName} from watchlist`}
+                    >
+                      <X size={18} style={{ color: 'var(--accent-red)' }} />
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <CreateWatchlistModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={handleWatchlistCreated}
+      />
+      <WatchlistManager
+        isOpen={showManagerModal}
+        onClose={() => setShowManagerModal(false)}
+      />
     </div>
   );
 }

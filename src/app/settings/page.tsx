@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 
 export default function SettingsPage() {
   const { theme, fontSize, symbolFormat, setTheme, setFontSize, setSymbolFormat } = useSettingsStore();
-  const { symbols } = useWatchlistStore();
+  const watchlists = useWatchlistStore((state) => state.watchlists);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -35,24 +35,24 @@ export default function SettingsPage() {
   }, [theme, fontSize, mounted]);
 
   const handleClearCache = () => {
-    if (confirm('This will clear all cached data. Your watchlist will be preserved. Continue?')) {
+    if (confirm('This will clear all cached data. Your watchlists will be preserved. Continue?')) {
       // Clear localStorage except watchlist and settings
-      const watchlist = localStorage.getItem('sharesathi-watchlist');
+      const watchlist = localStorage.getItem('sharesathi-watchlist-v2');
       const settings = localStorage.getItem('sharesathi-settings');
       localStorage.clear();
-      if (watchlist) localStorage.setItem('sharesathi-watchlist', watchlist);
+      if (watchlist) localStorage.setItem('sharesathi-watchlist-v2', watchlist);
       if (settings) localStorage.setItem('sharesathi-settings', settings);
       alert('Cache cleared successfully!');
     }
   };
 
   const handleExportWatchlist = () => {
-    const data = JSON.stringify(symbols, null, 2);
+    const data = JSON.stringify(watchlists, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'sharesathi-watchlist.json';
+    a.download = 'sharesathi-watchlists.json';
     a.click();
     URL.revokeObjectURL(url);
   };
