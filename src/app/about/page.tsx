@@ -6,7 +6,6 @@ import {
   BarChart3,
   BookOpen,
   MessageCircle,
-  Newspaper,
   Smartphone,
   Moon,
   Shield,
@@ -26,16 +25,16 @@ const features = [
     color: 'var(--accent-green)',
   },
   {
-    icon: Star,
-    title: 'Multiple Watchlists',
-    description: 'Create up to 10 custom watchlists with 50 stocks each. Organize your investments your way.',
-    color: 'var(--accent-yellow)',
+    icon: BarChart3,
+    title: 'Market Monitor',
+    description: 'View all 6,900+ stocks in one place. Sort by price, change, or market cap. Filter by index.',
+    color: 'var(--accent-blue)',
   },
   {
-    icon: BarChart3,
-    title: 'Market Pulse',
-    description: 'Track SENSEX & NIFTY at a glance. See top gainers and losers across the market.',
-    color: 'var(--accent-blue)',
+    icon: Star,
+    title: 'Multiple Watchlists',
+    description: 'Create up to 10 custom watchlists with 50 stocks each. Track portfolio analytics.',
+    color: 'var(--accent-yellow)',
   },
   {
     icon: Clock,
@@ -54,12 +53,6 @@ const features = [
     title: 'AI Assistant',
     description: 'Ask questions about your portfolio and get intelligent insights powered by AI.',
     color: 'var(--accent-blue)',
-  },
-  {
-    icon: Newspaper,
-    title: 'Latest News',
-    description: 'Stay updated with curated financial news and stock-specific updates.',
-    color: 'var(--accent-green)',
   },
 ];
 

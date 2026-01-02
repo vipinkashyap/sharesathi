@@ -2,12 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Search, Star, BookOpen, Settings } from 'lucide-react';
+import { Home, Search, BarChart3, BookOpen, Settings } from 'lucide-react';
 
 // 5-item navigation - same for mobile and desktop
 const navItems = [
   { href: '/', icon: Home, label: 'Home' },
-  { href: '/watchlist', icon: Star, label: 'Watchlist' },
+  { href: '/market', icon: BarChart3, label: 'Market' },
   { href: '/search', icon: Search, label: 'Search' },
   { href: '/learn', icon: BookOpen, label: 'Learn' },
   { href: '/settings', icon: Settings, label: 'Settings' },

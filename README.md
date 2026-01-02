@@ -13,11 +13,19 @@ A modern, mobile-first Progressive Web App (PWA) for tracking BSE (Bombay Stock 
 - Interactive price charts with multiple timeframes (1D, 1W, 1M, 3M, 1Y)
 - Key metrics: Market Cap, P/E Ratio, 52-week High/Low, Volume
 
+### Market Monitor
+- Full market view with all 6,900+ BSE stocks
+- Sortable columns: Price, Change %, Volume, Market Cap
+- Filter by index (NIFTY 50, Bank Nifty, IT, Pharma, Auto, etc.)
+- Virtual scrolling for smooth performance
+- Quick add to watchlist from market view
+
 ### Multiple Watchlists
 - Create up to 10 custom watchlists
 - Add up to 50 stocks per watchlist
 - Curated "Top Picks" watchlist included
 - Full management: create, rename, delete watchlists
+- Portfolio analytics and metrics
 
 ### Market Overview
 - Live market pulse with SENSEX, NIFTY & USD/INR
@@ -103,6 +111,7 @@ src/
 │   ├── search/           # Stock search page
 │   ├── settings/         # App settings
 │   ├── stock/[symbol]/   # Stock detail page
+│   ├── market/           # Full market monitor
 │   ├── timemachine/      # What-If investment calculator
 │   └── watchlist/        # Watchlist management
 ├── components/            # React components
