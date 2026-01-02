@@ -56,7 +56,8 @@ export default function MarketPage() {
 
     // Apply filter
     if (activeFilter === 'all') {
-      stocks = allStocks as StockData[];
+      // Only show stocks with price data (filter out zeros)
+      stocks = (allStocks as StockData[]).filter(s => s.price > 0);
     } else if (activeFilter === 'index' && activeFilterId) {
       const constituents = indexData.constituents[activeFilterId as keyof typeof indexData.constituents];
       if (constituents) {
