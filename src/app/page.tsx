@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Info } from 'lucide-react';
+import Link from 'next/link';
 import { MarketStatus } from '@/components/MarketStatus';
 import { MarketPulse } from '@/components/MarketPulse';
 import { WatchlistSection } from '@/components/WatchlistSection';
@@ -46,10 +47,17 @@ export default function Dashboard() {
         className="sticky top-0 z-10"
         style={{ backgroundColor: 'var(--bg-primary)' }}
       >
-        <div className="px-4 py-3">
+        <div className="px-4 py-3 flex items-center justify-between">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
             ShareSathi
           </h1>
+          <Link
+            href="/about"
+            className="p-2 rounded-full hover:bg-bg-secondary transition-colors"
+            aria-label="About ShareSathi"
+          >
+            <Info size={22} style={{ color: 'var(--text-muted)' }} />
+          </Link>
         </div>
         <MarketStatus />
       </header>
