@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings, Sun, Moon, Type, Trash2, Download, Heart, Database, Info, ChevronRight } from 'lucide-react';
+import { Settings, Sun, Moon, Type, Trash2, Download, Heart, Info, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useWatchlistStore } from '@/store/watchlistStore';
 import { Card } from '@/components/ui/Card';
 
 export default function SettingsPage() {
-  const { theme, fontSize, symbolFormat, setTheme, setFontSize, setSymbolFormat } = useSettingsStore();
+  const { theme, fontSize, setTheme, setFontSize } = useSettingsStore();
   const watchlists = useWatchlistStore((state) => state.watchlists);
   const [mounted, setMounted] = useState(false);
 
@@ -135,44 +135,6 @@ export default function SettingsPage() {
               </div>
             </div>
           </Card>
-        </section>
-
-        {/* Stock Symbol Format */}
-        <section>
-          <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
-            Stock Symbols
-          </h2>
-          <Card>
-            <div className="py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Database size={20} style={{ color: 'var(--text-secondary)' }} />
-                  <div>
-                    <span style={{ color: 'var(--text-primary)' }}>Symbol Format</span>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      How stock codes are displayed
-                    </p>
-                  </div>
-                </div>
-                <select
-                  value={symbolFormat}
-                  onChange={(e) => setSymbolFormat(e.target.value as 'bse' | 'nse')}
-                  className="px-3 py-2 rounded-lg text-sm font-medium touch-target"
-                  style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  <option value="bse">BSE (500325)</option>
-                  <option value="nse">NSE (RELIANCE)</option>
-                </select>
-              </div>
-            </div>
-          </Card>
-          <p className="text-xs mt-2 px-1" style={{ color: 'var(--text-muted)' }}>
-            BSE uses numeric codes. NSE uses company ticker symbols.
-          </p>
         </section>
 
         {/* Data Management Section */}
