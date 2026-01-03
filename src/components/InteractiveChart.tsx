@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { HelpCircle, X } from 'lucide-react';
 
-type TimeRange = '1D' | '1W' | '1M' | '3M' | '1Y';
+type TimeRange = '1D' | '1W' | '1M' | '3M' | '1Y' | '5Y' | '10Y';
 
 interface PricePoint {
   date: string;
@@ -20,12 +21,63 @@ interface InteractiveChartProps {
   previousClose: number;
 }
 
-const TIME_RANGES: { key: TimeRange; label: string; interval: string; range: string }[] = [
-  { key: '1D', label: '1D', interval: '5m', range: '1d' },
-  { key: '1W', label: '1W', interval: '1h', range: '5d' },
-  { key: '1M', label: '1M', interval: '1d', range: '1mo' },
-  { key: '3M', label: '3M', interval: '1d', range: '3mo' },
-  { key: '1Y', label: '1Y', interval: '1wk', range: '1y' },
+const TIME_RANGES: { key: TimeRange; label: string; interval: string; range: string; tooltip: string; description: string }[] = [
+  {
+    key: '1D',
+    label: '1D',
+    interval: '5m',
+    range: '1d',
+    tooltip: 'Today\'s price movement',
+    description: 'Intraday data at 5-minute intervals. Change compared to yesterday\'s close.',
+  },
+  {
+    key: '1W',
+    label: '1W',
+    interval: '1h',
+    range: '5d',
+    tooltip: 'Last 5 trading days',
+    description: 'Hourly data for the past week. Change from week\'s opening price.',
+  },
+  {
+    key: '1M',
+    label: '1M',
+    interval: '1d',
+    range: '1mo',
+    tooltip: 'Last 30 days',
+    description: 'Daily closing prices for past month. Change from month\'s first price.',
+  },
+  {
+    key: '3M',
+    label: '3M',
+    interval: '1d',
+    range: '3mo',
+    tooltip: 'Last 3 months',
+    description: 'Daily closing prices for past 3 months. Change from period\'s first price.',
+  },
+  {
+    key: '1Y',
+    label: '1Y',
+    interval: '1wk',
+    range: '1y',
+    tooltip: 'Last 1 year',
+    description: 'Weekly closing prices for past year. Change from year\'s first price.',
+  },
+  {
+    key: '5Y',
+    label: '5Y',
+    interval: '1mo',
+    range: '5y',
+    tooltip: 'Last 5 years',
+    description: 'Monthly closing prices for past 5 years. Change from 5 years ago.',
+  },
+  {
+    key: '10Y',
+    label: '10Y',
+    interval: '1mo',
+    range: '10y',
+    tooltip: 'Last 10 years or since listing',
+    description: 'Monthly closing prices. For newer stocks, shows data since IPO/listing.',
+  },
 ];
 
 export function InteractiveChart({ symbol, initialData, currentPrice, previousClose }: InteractiveChartProps) {
@@ -33,6 +85,7 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
   const [chartData, setChartData] = useState<PricePoint[]>(initialData || []);
   const [loading, setLoading] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<{ price: number; date: string; x: number; y: number } | null>(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const width = 320;
   const height = 180;
@@ -165,24 +218,31 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
   return (
     <div className="w-full">
       {/* Time Range Tabs */}
-      <div className="flex justify-center gap-2 mb-4">
-        {TIME_RANGES.map((range) => (
-          <button
-            key={range.key}
-            onClick={() => setSelectedRange(range.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              selectedRange === range.key
-                ? 'text-white'
-                : 'hover:bg-[var(--bg-secondary)]'
-            }`}
-            style={{
-              backgroundColor: selectedRange === range.key ? 'var(--accent-blue)' : 'transparent',
-              color: selectedRange === range.key ? 'white' : 'var(--text-secondary)',
-            }}
-          >
-            {range.label}
-          </button>
-        ))}
+      <div className="flex items-center justify-center gap-1 mb-4">
+        <div className="flex rounded-lg overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+          {TIME_RANGES.map((range) => (
+            <button
+              key={range.key}
+              onClick={() => setSelectedRange(range.key)}
+              className="px-2.5 py-1.5 text-xs font-semibold transition-colors"
+              style={{
+                backgroundColor: selectedRange === range.key ? 'var(--accent-blue)' : 'transparent',
+                color: selectedRange === range.key ? 'white' : 'var(--text-secondary)',
+              }}
+              title={range.tooltip}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setShowHelpModal(true)}
+          className="p-1.5 rounded-full hover:bg-[var(--bg-secondary)] transition-colors ml-1"
+          title="How is chart data calculated?"
+          aria-label="Help"
+        >
+          <HelpCircle size={14} style={{ color: 'var(--text-muted)' }} />
+        </button>
       </div>
 
       {/* Hovered Price Display */}
@@ -355,6 +415,15 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
             const changePct = refPrice > 0 ? (change / refPrice) * 100 : 0;
             const isUp = change >= 0;
 
+            // Format period text
+            const periodText = selectedRange === '1D' ? 'today' :
+              selectedRange === '1W' ? 'past 1 week' :
+              selectedRange === '1M' ? 'past 1 month' :
+              selectedRange === '3M' ? 'past 3 months' :
+              selectedRange === '1Y' ? 'past 1 year' :
+              selectedRange === '5Y' ? 'past 5 years' :
+              'past 10 years';
+
             return (
               <span
                 className="text-sm font-medium"
@@ -362,11 +431,88 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
               >
                 {isUp ? '+' : ''}{formatPrice(change)} ({isUp ? '+' : ''}{changePct.toFixed(2)}%)
                 <span className="ml-1" style={{ color: 'var(--text-muted)' }}>
-                  {selectedRange === '1D' ? 'today' : `past ${selectedRange.replace('1', '1 ').toLowerCase()}`}
+                  {periodText}
                 </span>
               </span>
             );
           })()}
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowHelpModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl p-5 max-h-[80vh] overflow-auto"
+            style={{ backgroundColor: 'var(--bg-card)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Chart Time Ranges
+              </h2>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="p-1 rounded-full hover:bg-[var(--bg-secondary)]"
+              >
+                <X size={20} style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {TIME_RANGES.map((range) => (
+                <div key={range.key} className="pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-semibold"
+                      style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+                    >
+                      {range.label}
+                    </span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {range.tooltip}
+                    </span>
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    {range.description}
+                  </p>
+                </div>
+              ))}
+
+              <div className="pt-2">
+                <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  How Change % is Calculated
+                </h3>
+                <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  For <strong>1D</strong>: Compares current price to yesterday&apos;s closing price.
+                </p>
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  For <strong>other periods</strong>: Compares current price to the first price point in the selected range.
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Data Source
+                </h3>
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  Chart data from Yahoo Finance (NSE preferred, BSE fallback). Prices delayed ~15-20 min during market hours.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowHelpModal(false)}
+              className="w-full mt-5 py-2.5 rounded-lg font-medium text-sm"
+              style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+            >
+              Got it
+            </button>
+          </div>
         </div>
       )}
     </div>

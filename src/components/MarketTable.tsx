@@ -2,10 +2,46 @@
 
 import { useState, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowUp, ArrowDown, ArrowUpDown, Star, Loader2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpDown, Star, Loader2, HelpCircle, X } from 'lucide-react';
 import { formatPrice, formatPercent, formatMarketCap, formatVolume } from '@/lib/formatters';
 import { useWatchlistStore } from '@/store/watchlistStore';
 import { useBatchStocks } from '@/hooks/useBatchStocks';
+
+type ChangePeriod = 'day' | 'week' | 'month' | 'year' | '5year' | '10year';
+
+// Period descriptions for tooltips and modal
+const PERIOD_INFO: Record<ChangePeriod, { label: string; tooltip: string; description: string }> = {
+  day: {
+    label: '1D',
+    tooltip: 'Change since yesterday\'s close',
+    description: 'Compares current price to yesterday\'s closing price (previous trading day close).',
+  },
+  week: {
+    label: '1W',
+    tooltip: 'Change over 7 calendar days',
+    description: 'Compares current price to the closing price from 7 days ago (or ~5 trading days back if exact date unavailable).',
+  },
+  month: {
+    label: '1M',
+    tooltip: 'Change over ~30 days',
+    description: 'Compares current price to the closing price from approximately 1 month ago (earliest available in 30-day data).',
+  },
+  year: {
+    label: '1Y',
+    tooltip: 'Change over 1 year',
+    description: 'Compares current price to the weekly closing price from 1 year ago.',
+  },
+  '5year': {
+    label: '5Y',
+    tooltip: 'Change over 5 years',
+    description: 'Compares current price to the weekly closing price from 5 years ago.',
+  },
+  '10year': {
+    label: '10Y',
+    tooltip: 'Change since listing or 10 years',
+    description: 'Compares current price to the weekly closing price from 10 years ago. For newer stocks, uses the earliest available price (since IPO/listing).',
+  },
+};
 
 interface StockRow {
   symbol: string;
@@ -21,7 +57,6 @@ interface StockRow {
 
 type SortKey = 'shortName' | 'price' | 'changePercent' | 'volume' | 'marketCap';
 type SortOrder = 'asc' | 'desc';
-type ChangePeriod = 'day' | 'week' | 'month' | 'year' | '5year' | '10year';
 
 interface MarketTableProps {
   stocks: StockRow[];
@@ -50,6 +85,7 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [scrollTop, setScrollTop] = useState(0);
   const [changePeriod, setChangePeriod] = useState<ChangePeriod>('day');
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { watchlists, addStock, removeStock } = useWatchlistStore();
@@ -153,12 +189,22 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
     <div className="flex flex-col h-full">
       {/* Period toggle bar */}
       <div
-        className="flex items-center justify-between px-3 py-2 border-b"
+        className="flex items-center justify-between px-3 py-2 border-b gap-2"
         style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
       >
-        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-          Change period:
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
+            Change:
+          </span>
+          <button
+            onClick={() => setShowHelpModal(true)}
+            className="p-1 rounded-full hover:bg-[var(--bg-card)] transition-colors"
+            title="How are these percentages calculated?"
+            aria-label="Help"
+          >
+            <HelpCircle size={14} style={{ color: 'var(--text-muted)' }} />
+          </button>
+        </div>
         <div
           className="flex rounded-lg overflow-hidden"
           style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
@@ -172,18 +218,21 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
                 backgroundColor: changePeriod === period ? 'var(--accent-blue)' : 'transparent',
                 color: changePeriod === period ? 'white' : 'var(--text-secondary)',
               }}
+              title={PERIOD_INFO[period].tooltip}
             >
-              {period === 'day' ? '1D' : period === 'week' ? '1W' : period === 'month' ? '1M' : period === 'year' ? '1Y' : period === '5year' ? '5Y' : '10Y'}
+              {PERIOD_INFO[period].label}
             </button>
           ))}
         </div>
-        {isLiveLoading && (
-          <div className="flex items-center gap-1.5">
+        {isLiveLoading ? (
+          <div className="flex items-center gap-1.5 min-w-[60px] justify-end">
             <Loader2 size={14} className="animate-spin" style={{ color: 'var(--accent-blue)' }} />
             <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
               Loading...
             </span>
           </div>
+        ) : (
+          <div className="min-w-[60px]" />
         )}
       </div>
 
@@ -372,6 +421,83 @@ Red bar = Stock is near its 52-week LOW"
           Showing {sortedStocks.length.toLocaleString()} stocks
         </span>
       </div>
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowHelpModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl p-5 max-h-[80vh] overflow-auto"
+            style={{ backgroundColor: 'var(--bg-card)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                How Change % is Calculated
+              </h2>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="p-1 rounded-full hover:bg-[var(--bg-secondary)]"
+              >
+                <X size={20} style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {(['day', 'week', 'month', 'year', '5year', '10year'] as ChangePeriod[]).map((period) => (
+                <div key={period} className="pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-semibold"
+                      style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+                    >
+                      {PERIOD_INFO[period].label}
+                    </span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {PERIOD_INFO[period].tooltip}
+                    </span>
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    {PERIOD_INFO[period].description}
+                  </p>
+                </div>
+              ))}
+
+              <div className="pt-2">
+                <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Data Source
+                </h3>
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  Prices are fetched from Yahoo Finance (NSE preferred, BSE fallback). Data is typically delayed by 15-20 minutes during market hours.
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Formula
+                </h3>
+                <div
+                  className="p-3 rounded-lg text-xs font-mono"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                >
+                  Change % = ((Current Price - Old Price) / Old Price) × 100
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowHelpModal(false)}
+              className="w-full mt-5 py-2.5 rounded-lg font-medium text-sm"
+              style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
