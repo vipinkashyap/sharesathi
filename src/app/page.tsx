@@ -105,7 +105,7 @@ export default function Dashboard() {
 
         {/* News Section */}
         <div className="px-4">
-          <NewsCard news={news.slice(0, 5)} loading={newsLoading} />
+          <NewsCard news={news.slice(0, 15)} loading={newsLoading} />
         </div>
       </div>
 

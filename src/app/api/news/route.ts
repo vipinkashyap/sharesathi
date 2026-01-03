@@ -31,7 +31,7 @@ async function fetchGoogleNews(query: string): Promise<NewsItem[]> {
     const items: NewsItem[] = [];
     const itemMatches = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
 
-    for (const item of itemMatches.slice(0, 10)) {
+    for (const item of itemMatches.slice(0, 25)) {
       const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
                    item.match(/<title>(.*?)<\/title>/)?.[1] || '';
       const link = item.match(/<link>(.*?)<\/link>/)?.[1] || '';
@@ -47,6 +47,13 @@ async function fetchGoogleNews(query: string): Promise<NewsItem[]> {
         });
       }
     }
+
+    // Sort by date (most recent first)
+    items.sort((a, b) => {
+      const dateA = new Date(a.pubDate).getTime() || 0;
+      const dateB = new Date(b.pubDate).getTime() || 0;
+      return dateB - dateA;
+    });
 
     return items;
   } catch (error) {
