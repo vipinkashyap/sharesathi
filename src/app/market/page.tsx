@@ -29,8 +29,10 @@ interface IndexData {
 
 // Available indices - organized by category
 const INDICES = [
-  // Broad market
-  { id: 'nifty500', name: 'All (500)' },
+  // All stocks from BSE (4000+)
+  { id: 'all-bse', name: 'All BSE (4000+)' },
+  // Broad market from NSE
+  { id: 'nifty500', name: 'Nifty 500' },
   { id: 'nifty50', name: 'Nifty 50' },
   { id: 'nifty100', name: 'Nifty 100' },
   { id: 'niftynext50', name: 'Next 50' },
@@ -54,7 +56,7 @@ export default function MarketPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('index');
   const [activeWatchlistId, setActiveWatchlistId] = useState<string | null>(null);
-  const [activeIndex, setActiveIndex] = useState('nifty500');
+  const [activeIndex, setActiveIndex] = useState('all-bse');
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [indexData, setIndexData] = useState<IndexData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,15 +70,26 @@ export default function MarketPage() {
     }
   }, [watchlists, activeWatchlistId]);
 
-  // Fetch index constituents
+  // Fetch index constituents or all BSE stocks
   const fetchIndexData = useCallback(async (indexId: string) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/indices/constituents?index=${indexId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setStocks(data.stocks || []);
-        setIndexData(data.advance || null);
+      if (indexId === 'all-bse') {
+        // Fetch all BSE stocks from bhavcopy
+        const response = await fetch('/api/stocks/all?limit=5000&sort=volume');
+        if (response.ok) {
+          const data = await response.json();
+          setStocks(data.stocks || []);
+          setIndexData(null);
+        }
+      } else {
+        // Fetch NSE index constituents
+        const response = await fetch(`/api/indices/constituents?index=${indexId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setStocks(data.stocks || []);
+          setIndexData(data.advance || null);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch index data:', err);
