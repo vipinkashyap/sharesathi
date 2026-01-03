@@ -50,7 +50,7 @@ interface StockRow {
   price: number;
   change: number;
   changePercent: number;
-  marketCap: number;
+  marketCap?: number;
   volume?: number;
   nseSymbol?: string;
 }
@@ -398,7 +398,7 @@ Red bar = Stock is near its 52-week LOW"
                   {/* Market Cap - hidden on mobile */}
                   <div className="text-right whitespace-nowrap hidden sm:block">
                     <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      {stock.marketCap > 0 ? formatMarketCap(stock.marketCap) : '-'}
+                      {stock.marketCap && stock.marketCap > 0 ? formatMarketCap(stock.marketCap) : '-'}
                     </span>
                   </div>
                 </Link>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, TrendingUp, TrendingDown } from 'lucide-react';
 import Link from 'next/link';
 import { MarketTable } from '@/components/MarketTable';
 import { useWatchlistStore } from '@/store/watchlistStore';
@@ -13,15 +13,38 @@ interface StockData {
   price: number;
   change: number;
   changePercent: number;
-  marketCap: number;
   volume?: number;
-  nseSymbol?: string;
+  yearHigh?: number;
+  yearLow?: number;
+  changePercentYear?: number;
+  changePercentMonth?: number;
+  industry?: string;
 }
+
+interface IndexData {
+  advances: number;
+  declines: number;
+  unchanged: number;
+}
+
+// Available indices
+const INDICES = [
+  { id: 'nifty50', name: 'Nifty 50' },
+  { id: 'niftybank', name: 'Bank Nifty' },
+  { id: 'niftyit', name: 'Nifty IT' },
+  { id: 'niftynext50', name: 'Nifty Next 50' },
+  { id: 'niftymidcap50', name: 'Midcap 50' },
+];
+
+type ViewMode = 'watchlist' | 'index';
 
 export default function MarketPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('index');
   const [activeWatchlistId, setActiveWatchlistId] = useState<string | null>(null);
-  const [liveStocks, setLiveStocks] = useState<Map<string, StockData>>(new Map());
+  const [activeIndex, setActiveIndex] = useState('nifty50');
+  const [stocks, setStocks] = useState<StockData[]>([]);
+  const [indexData, setIndexData] = useState<IndexData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const { watchlists } = useWatchlistStore();
@@ -33,19 +56,28 @@ export default function MarketPage() {
     }
   }, [watchlists, activeWatchlistId]);
 
-  // Get symbols to fetch based on active watchlist
-  const symbolsToFetch = useMemo(() => {
-    if (activeWatchlistId) {
-      const watchlist = watchlists.find(w => w.id === activeWatchlistId);
-      return watchlist?.symbols || [];
+  // Fetch index constituents
+  const fetchIndexData = useCallback(async (indexId: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/indices/constituents?index=${indexId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setStocks(data.stocks || []);
+        setIndexData(data.advance || null);
+      }
+    } catch (err) {
+      console.error('Failed to fetch index data:', err);
+      setStocks([]);
+    } finally {
+      setLoading(false);
     }
-    return [];
-  }, [activeWatchlistId, watchlists]);
+  }, []);
 
-  // Fetch live stock data
-  const fetchLiveData = useCallback(async (symbols: string[]) => {
+  // Fetch watchlist stocks
+  const fetchWatchlistData = useCallback(async (symbols: string[]) => {
     if (symbols.length === 0) {
-      setLiveStocks(new Map());
+      setStocks([]);
       setLoading(false);
       return;
     }
@@ -55,41 +87,45 @@ export default function MarketPage() {
       const response = await fetch(`/api/stocks/batch?symbols=${symbols.join(',')}`);
       if (response.ok) {
         const data = await response.json();
-        const stockMap = new Map<string, StockData>();
-        for (const [symbol, stock] of Object.entries(data.stocks || {})) {
+        const stockList: StockData[] = [];
+        for (const [, stock] of Object.entries(data.stocks || {})) {
           if (stock && typeof stock === 'object' && 'price' in stock) {
-            stockMap.set(symbol, stock as StockData);
+            stockList.push(stock as StockData);
           }
         }
-        setLiveStocks(stockMap);
+        setStocks(stockList);
       }
     } catch (err) {
-      console.error('Failed to fetch live data:', err);
+      console.error('Failed to fetch watchlist data:', err);
+      setStocks([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Fetch data based on view mode
   useEffect(() => {
-    fetchLiveData(symbolsToFetch);
-  }, [symbolsToFetch, fetchLiveData]);
+    if (viewMode === 'index') {
+      setIndexData(null);
+      fetchIndexData(activeIndex);
+    } else {
+      setIndexData(null);
+      const watchlist = watchlists.find(w => w.id === activeWatchlistId);
+      fetchWatchlistData(watchlist?.symbols || []);
+    }
+  }, [viewMode, activeIndex, activeWatchlistId, watchlists, fetchIndexData, fetchWatchlistData]);
 
   const filteredStocks = useMemo(() => {
-    let stocks = Array.from(liveStocks.values());
+    if (!searchQuery.trim()) return stocks;
 
-    // Apply search
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      stocks = stocks.filter(
-        stock =>
-          stock.shortName.toLowerCase().includes(query) ||
-          stock.name.toLowerCase().includes(query) ||
-          stock.symbol.includes(query)
-      );
-    }
-
-    return stocks;
-  }, [searchQuery, liveStocks]);
+    const query = searchQuery.toLowerCase();
+    return stocks.filter(
+      stock =>
+        stock.shortName?.toLowerCase().includes(query) ||
+        stock.name?.toLowerCase().includes(query) ||
+        stock.symbol?.toLowerCase().includes(query)
+    );
+  }, [searchQuery, stocks]);
 
   const activeWatchlist = watchlists.find(w => w.id === activeWatchlistId);
 
@@ -105,9 +141,23 @@ export default function MarketPage() {
             <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
               Market Monitor
             </h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              {loading ? 'Loading...' : `${filteredStocks.length} stocks`}
-            </p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                {loading ? 'Loading...' : `${filteredStocks.length} stocks`}
+              </p>
+              {indexData && viewMode === 'index' && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="flex items-center gap-1" style={{ color: 'var(--accent-green)' }}>
+                    <TrendingUp size={12} />
+                    {indexData.advances}
+                  </span>
+                  <span className="flex items-center gap-1" style={{ color: 'var(--accent-red)' }}>
+                    <TrendingDown size={12} />
+                    {indexData.declines}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
           <Link
             href="/search"
@@ -120,31 +170,73 @@ export default function MarketPage() {
         </div>
       </div>
 
-      {/* Watchlist Selector & Search */}
+      {/* View Mode Toggle */}
+      <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('index')}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: viewMode === 'index' ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+              color: viewMode === 'index' ? 'white' : 'var(--text-secondary)',
+            }}
+          >
+            Indices
+          </button>
+          <button
+            onClick={() => setViewMode('watchlist')}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: viewMode === 'watchlist' ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+              color: viewMode === 'watchlist' ? 'white' : 'var(--text-secondary)',
+            }}
+          >
+            Watchlists
+          </button>
+        </div>
+      </div>
+
+      {/* Index/Watchlist Selector & Search */}
       <div className="px-4 py-3 space-y-3" style={{ borderBottom: '1px solid var(--border)' }}>
-        {/* Watchlist tabs */}
+        {/* Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {watchlists.map(watchlist => (
-            <button
-              key={watchlist.id}
-              onClick={() => setActiveWatchlistId(watchlist.id)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                activeWatchlistId === watchlist.id
-                  ? 'text-white'
-                  : ''
-              }`}
-              style={{
-                backgroundColor: activeWatchlistId === watchlist.id
-                  ? 'var(--accent-blue)'
-                  : 'var(--bg-secondary)',
-                color: activeWatchlistId === watchlist.id
-                  ? 'white'
-                  : 'var(--text-secondary)',
-              }}
-            >
-              {watchlist.name}
-            </button>
-          ))}
+          {viewMode === 'index' ? (
+            INDICES.map(index => (
+              <button
+                key={index.id}
+                onClick={() => setActiveIndex(index.id)}
+                className="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors"
+                style={{
+                  backgroundColor: activeIndex === index.id
+                    ? 'var(--accent-blue)'
+                    : 'var(--bg-secondary)',
+                  color: activeIndex === index.id
+                    ? 'white'
+                    : 'var(--text-secondary)',
+                }}
+              >
+                {index.name}
+              </button>
+            ))
+          ) : (
+            watchlists.map(watchlist => (
+              <button
+                key={watchlist.id}
+                onClick={() => setActiveWatchlistId(watchlist.id)}
+                className="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors"
+                style={{
+                  backgroundColor: activeWatchlistId === watchlist.id
+                    ? 'var(--accent-blue)'
+                    : 'var(--bg-secondary)',
+                  color: activeWatchlistId === watchlist.id
+                    ? 'white'
+                    : 'var(--text-secondary)',
+                }}
+              >
+                {watchlist.name}
+              </button>
+            ))
+          )}
         </div>
 
         {/* Search */}
@@ -166,7 +258,7 @@ export default function MarketPage() {
 
       {/* Table or Empty State */}
       <div className="flex-1 overflow-hidden">
-        {symbolsToFetch.length === 0 ? (
+        {viewMode === 'watchlist' && (!activeWatchlist || activeWatchlist.symbols.length === 0) ? (
           <div className="flex flex-col items-center justify-center h-full px-4 text-center">
             <p className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
               {activeWatchlist ? 'No stocks in this watchlist' : 'No watchlist selected'}
