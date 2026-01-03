@@ -65,15 +65,15 @@ export async function POST(request: NextRequest) {
         const yahooSymbol = nseSymbol ? `${nseSymbol}.NS` : `${symbol}.BO`;
         const bseSymbol = `${symbol}.BO`;
 
-        // Helper to fetch with timeout and caching
-        async function fetchYahoo(sym: string, range: string, revalidate: number) {
+        // Helper to fetch with timeout (no caching to avoid caching failed requests)
+        async function fetchYahoo(sym: string, range: string) {
           try {
             const resp = await fetch(
               `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=${range}`,
               {
                 headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-                signal: AbortSignal.timeout(8000),
-                next: { revalidate },
+                signal: AbortSignal.timeout(10000),
+                cache: 'no-store',
               }
             );
             if (resp.ok) {
@@ -89,22 +89,22 @@ export async function POST(request: NextRequest) {
         // Fetch periods in two batches to avoid overwhelming the connection
         // First batch: daily + short-term (most important for quick display)
         const [day, week, month] = await Promise.all([
-          fetchYahoo(yahooSymbol, '1d', 60),    // 1D: chartPreviousClose = yesterday's close
-          fetchYahoo(yahooSymbol, '5d', 60),    // 1W: chartPreviousClose = 5 days ago
-          fetchYahoo(yahooSymbol, '1mo', 60),   // 1M: chartPreviousClose = ~1 month ago
+          fetchYahoo(yahooSymbol, '1d'),    // 1D: chartPreviousClose = yesterday's close
+          fetchYahoo(yahooSymbol, '5d'),    // 1W: chartPreviousClose = 5 days ago
+          fetchYahoo(yahooSymbol, '1mo'),   // 1M: chartPreviousClose = ~1 month ago
         ]);
 
         // Second batch: longer-term data
         const [year, fiveYear, tenYear] = await Promise.all([
-          fetchYahoo(yahooSymbol, '1y', 300),   // 1Y: chartPreviousClose = ~1 year ago
-          fetchYahoo(yahooSymbol, '5y', 300),   // 5Y: chartPreviousClose = ~5 years ago
-          fetchYahoo(yahooSymbol, '10y', 300),  // 10Y: chartPreviousClose = ~10 years ago
+          fetchYahoo(yahooSymbol, '1y'),    // 1Y: chartPreviousClose = ~1 year ago
+          fetchYahoo(yahooSymbol, '5y'),    // 5Y: chartPreviousClose = ~5 years ago
+          fetchYahoo(yahooSymbol, '10y'),   // 10Y: chartPreviousClose = ~10 years ago
         ]);
 
         // Try BSE fallback if NSE failed for daily data
         let dailyResult = day;
         if (!dailyResult && nseSymbol) {
-          dailyResult = await fetchYahoo(bseSymbol, '1d', 60);
+          dailyResult = await fetchYahoo(bseSymbol, '1d');
         }
 
         // Need at least daily data for basic info
@@ -124,11 +124,11 @@ export async function POST(request: NextRequest) {
 
         // Use Yahoo's chartPreviousClose for each period - this is industry standard
         const changePercent = calcChangeFromResult(dailyResult);
-        const changePercentWeek = calcChangeFromResult(week || (nseSymbol ? await fetchYahoo(bseSymbol, '5d', 60) : null));
-        const changePercentMonth = calcChangeFromResult(month || (nseSymbol ? await fetchYahoo(bseSymbol, '1mo', 60) : null));
-        const changePercentYear = calcChangeFromResult(year || (nseSymbol ? await fetchYahoo(bseSymbol, '1y', 300) : null));
-        const changePercent5Year = calcChangeFromResult(fiveYear || (nseSymbol ? await fetchYahoo(bseSymbol, '5y', 300) : null));
-        const changePercent10Year = calcChangeFromResult(tenYear || (nseSymbol ? await fetchYahoo(bseSymbol, '10y', 300) : null));
+        const changePercentWeek = calcChangeFromResult(week || (nseSymbol ? await fetchYahoo(bseSymbol, '5d') : null));
+        const changePercentMonth = calcChangeFromResult(month || (nseSymbol ? await fetchYahoo(bseSymbol, '1mo') : null));
+        const changePercentYear = calcChangeFromResult(year || (nseSymbol ? await fetchYahoo(bseSymbol, '1y') : null));
+        const changePercent5Year = calcChangeFromResult(fiveYear || (nseSymbol ? await fetchYahoo(bseSymbol, '5y') : null));
+        const changePercent10Year = calcChangeFromResult(tenYear || (nseSymbol ? await fetchYahoo(bseSymbol, '10y') : null));
 
         const prevClose = dailyResult.meta.chartPreviousClose || meta.previousClose || price;
         const change = price - prevClose;
