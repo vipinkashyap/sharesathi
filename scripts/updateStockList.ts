@@ -112,8 +112,10 @@ async function main() {
   const nseStocks = await fetchNSEStockList();
 
   if (nseStocks.length === 0) {
-    console.error('\n✗ Failed to fetch any stocks. Keeping existing data.');
-    process.exit(1);
+    console.log('\n⚠ Could not fetch NSE data (likely blocked by NSE - returns 503 from cloud IPs).');
+    console.log('This is expected when running from GitHub Actions or other cloud environments.');
+    console.log('Stock list remains unchanged. Run locally to update the list.');
+    process.exit(0); // Exit successfully - don't fail the workflow
   }
 
   // Merge: Keep ALL existing stocks (with price data) + add new from NSE
