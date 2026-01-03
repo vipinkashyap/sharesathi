@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowUp, ArrowDown, ArrowUpDown, Star } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpDown, Star, Loader2 } from 'lucide-react';
 import { formatPrice, formatPercent, formatMarketCap, formatVolume } from '@/lib/formatters';
 import { useWatchlistStore } from '@/store/watchlistStore';
+import { useBatchStocks } from '@/hooks/useBatchStocks';
 
 interface StockRow {
   symbol: string;
@@ -28,6 +29,20 @@ interface MarketTableProps {
 
 const VISIBLE_ROWS = 30;
 const ROW_HEIGHT = 52;
+
+// Calculate 52W position as percentage (0 = at low, 100 = at high)
+function calc52WPosition(price: number, high: number, low: number): number | null {
+  if (!high || !low || high <= low || price <= 0) return null;
+  const position = ((price - low) / (high - low)) * 100;
+  return Math.max(0, Math.min(100, position));
+}
+
+// Get color based on 52W position
+function get52WColor(position: number): string {
+  if (position >= 80) return 'var(--accent-green)';
+  if (position <= 20) return 'var(--accent-red)';
+  return 'var(--accent-yellow)';
+}
 
 export function MarketTable({ stocks, isLoading }: MarketTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('marketCap');
@@ -88,6 +103,10 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
   const totalHeight = sortedStocks.length * ROW_HEIGHT;
   const offsetY = startIndex * ROW_HEIGHT;
 
+  // Fetch live data for visible stocks
+  const visibleSymbols = useMemo(() => visibleStocks.map(s => s.symbol), [visibleStocks]);
+  const { liveData, isLoading: isLiveLoading } = useBatchStocks(visibleSymbols);
+
   const toggleWatchlist = (symbol: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -127,18 +146,29 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header - Mobile: 4 cols, Desktop: 6 cols */}
+      {/* Header - Mobile: 4 cols, Desktop: 7 cols */}
       <div
-        className="grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_auto_auto_auto_auto] gap-2 sm:gap-4 px-3 sm:px-4 py-3 border-b sticky top-0 z-10"
+        className="grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 sm:gap-3 px-2 sm:px-4 py-3 border-b sticky top-0 z-10"
         style={{
           backgroundColor: 'var(--bg-card)',
           borderColor: 'var(--border)'
         }}
       >
-        <div className="w-8"></div>
+        <div className="w-8 flex items-center justify-center">
+          {isLiveLoading && (
+            <Loader2 size={12} className="animate-spin" style={{ color: 'var(--accent-blue)' }} />
+          )}
+        </div>
         <SortHeader label="Stock" sortKeyName="shortName" className="justify-start" />
         <SortHeader label="Price" sortKeyName="price" className="justify-end" />
         <SortHeader label="Chg" sortKeyName="changePercent" className="justify-end" />
+        <div
+          className="text-xs font-semibold uppercase tracking-wide text-right hidden sm:flex items-center justify-end cursor-help"
+          style={{ color: 'var(--text-muted)' }}
+          title="52-Week Range: Shows where the current price sits between its 52-week low and high. Green = near high, Yellow = mid-range, Red = near low"
+        >
+          52W
+        </div>
         <SortHeader label="Vol" sortKeyName="volume" className="justify-end hidden sm:flex" />
         <SortHeader label="MCap" sortKeyName="marketCap" className="justify-end hidden sm:flex" />
       </div>
@@ -153,14 +183,24 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
         <div style={{ height: totalHeight, position: 'relative' }}>
           <div style={{ transform: `translateY(${offsetY}px)` }}>
             {visibleStocks.map((stock) => {
-              const isPositive = stock.changePercent >= 0;
+              // Use live data if available, fallback to static
+              const live = liveData[stock.symbol];
+              const price = live?.price || stock.price;
+              const changePercent = live?.changePercent ?? stock.changePercent;
+              const volume = live?.volume || stock.volume;
+              const isPositive = changePercent >= 0;
               const isInWatchlist = watchlistSymbols.has(stock.symbol);
+
+              // Calculate 52W position
+              const position52W = live
+                ? calc52WPosition(price, live.fiftyTwoWeekHigh, live.fiftyTwoWeekLow)
+                : null;
 
               return (
                 <Link
                   key={stock.symbol}
                   href={`/stock/${stock.symbol}`}
-                  className="grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_auto_auto_auto_auto] gap-2 sm:gap-4 px-3 sm:px-4 items-center border-b hover:bg-opacity-50 transition-colors"
+                  className="grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 sm:gap-3 px-2 sm:px-4 items-center border-b hover:bg-opacity-50 transition-colors"
                   style={{
                     height: ROW_HEIGHT,
                     borderColor: 'var(--border)',
@@ -178,47 +218,69 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
                         color: isInWatchlist ? 'var(--accent-yellow)' : 'var(--text-muted)'
                       }}
                     >
-                      <Star size={16} fill={isInWatchlist ? 'currentColor' : 'none'} />
+                      <Star size={14} fill={isInWatchlist ? 'currentColor' : 'none'} />
                     </button>
                   </div>
 
                   {/* Stock name */}
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                    <div className="font-semibold text-xs sm:text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                       {stock.shortName}
-                    </div>
-                    <div className="text-xs truncate hidden xs:block" style={{ color: 'var(--text-muted)' }}>
-                      {stock.name}
                     </div>
                   </div>
 
                   {/* Price */}
                   <div className="text-right whitespace-nowrap">
-                    <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                      {formatPrice(stock.price)}
+                    <span
+                      className="font-semibold text-xs sm:text-sm"
+                      style={{ color: live ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+                    >
+                      {formatPrice(price)}
                     </span>
                   </div>
 
                   {/* Change */}
                   <div className="text-right whitespace-nowrap">
                     <span
-                      className="font-semibold text-sm"
+                      className="font-semibold text-xs sm:text-sm"
                       style={{ color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}
                     >
-                      {formatPercent(stock.changePercent)}
+                      {formatPercent(changePercent)}
                     </span>
+                  </div>
+
+                  {/* 52W Position - always show bar for consistent alignment, hidden on mobile */}
+                  <div className="hidden sm:flex items-center justify-end">
+                    <div
+                      className="w-10 h-1.5 rounded-full overflow-hidden"
+                      style={{ backgroundColor: 'var(--bg-secondary)' }}
+                      title={position52W !== null
+                        ? `${Math.round(position52W)}% between 52W low and high`
+                        : 'Loading...'
+                      }
+                    >
+                      {position52W !== null && (
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${position52W}%`,
+                            backgroundColor: get52WColor(position52W),
+                          }}
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {/* Volume - hidden on mobile */}
                   <div className="text-right whitespace-nowrap hidden sm:block">
-                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      {stock.volume ? formatVolume(stock.volume) : '-'}
+                    <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      {volume ? formatVolume(volume) : '-'}
                     </span>
                   </div>
 
                   {/* Market Cap - hidden on mobile */}
                   <div className="text-right whitespace-nowrap hidden sm:block">
-                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
                       {stock.marketCap > 0 ? formatMarketCap(stock.marketCap) : '-'}
                     </span>
                   </div>

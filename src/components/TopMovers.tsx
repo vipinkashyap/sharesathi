@@ -24,7 +24,7 @@ export function TopMovers({ gainers, losers }: TopMoversProps) {
           Top Movers Today
         </h2>
         <Link
-          href="/movers"
+          href="/market"
           className="text-sm font-medium"
           style={{ color: 'var(--accent-blue)' }}
         >
