@@ -4,6 +4,8 @@ interface LiveStockData {
   price: number;
   change: number;
   changePercent: number;
+  changePercentWeek: number;
+  changePercentMonth: number;
   volume: number;
   fiftyTwoWeekHigh: number;
   fiftyTwoWeekLow: number;

@@ -21,6 +21,7 @@ interface StockRow {
 
 type SortKey = 'shortName' | 'price' | 'changePercent' | 'volume' | 'marketCap';
 type SortOrder = 'asc' | 'desc';
+type ChangePeriod = 'day' | 'week' | 'month';
 
 interface MarketTableProps {
   stocks: StockRow[];
@@ -48,6 +49,7 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('marketCap');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [scrollTop, setScrollTop] = useState(0);
+  const [changePeriod, setChangePeriod] = useState<ChangePeriod>('day');
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { watchlists, addStock, removeStock } = useWatchlistStore();
@@ -144,28 +146,63 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
     );
   }
 
+  // Get label for change column based on period
+  const changeLabel = changePeriod === 'day' ? '1D' : changePeriod === 'week' ? '1W' : '1M';
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header - Mobile: 4 cols, Desktop: 7 cols */}
+      {/* Period toggle bar */}
       <div
-        className="grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 sm:gap-3 px-2 sm:px-4 py-3 border-b sticky top-0 z-10"
+        className="flex items-center justify-between px-3 py-2 border-b"
+        style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+      >
+        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+          Change period:
+        </span>
+        <div
+          className="flex rounded-lg overflow-hidden"
+          style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
+        >
+          {(['day', 'week', 'month'] as ChangePeriod[]).map((period) => (
+            <button
+              key={period}
+              onClick={() => setChangePeriod(period)}
+              className="px-3 py-1.5 text-xs font-semibold transition-colors"
+              style={{
+                backgroundColor: changePeriod === period ? 'var(--accent-blue)' : 'transparent',
+                color: changePeriod === period ? 'white' : 'var(--text-secondary)',
+              }}
+            >
+              {period === 'day' ? '1 Day' : period === 'week' ? '1 Week' : '1 Month'}
+            </button>
+          ))}
+        </div>
+        {isLiveLoading && (
+          <Loader2 size={14} className="animate-spin" style={{ color: 'var(--accent-blue)' }} />
+        )}
+      </div>
+
+      {/* Header - Mobile: 4 cols, Desktop: 7 cols */}
+      {/* Fixed min-widths prevent layout shift during loading */}
+      <div
+        className="grid grid-cols-[32px_1fr_minmax(70px,auto)_minmax(55px,auto)] sm:grid-cols-[32px_1fr_minmax(80px,auto)_minmax(60px,auto)_48px_minmax(50px,auto)_minmax(70px,auto)] gap-2 sm:gap-3 px-2 sm:px-4 py-3 border-b sticky top-0 z-10"
         style={{
           backgroundColor: 'var(--bg-card)',
           borderColor: 'var(--border)'
         }}
       >
-        <div className="w-8 flex items-center justify-center">
-          {isLiveLoading && (
-            <Loader2 size={12} className="animate-spin" style={{ color: 'var(--accent-blue)' }} />
-          )}
-        </div>
+        <div className="w-8" />
         <SortHeader label="Stock" sortKeyName="shortName" className="justify-start" />
         <SortHeader label="Price" sortKeyName="price" className="justify-end" />
-        <SortHeader label="Chg" sortKeyName="changePercent" className="justify-end" />
+        <SortHeader label={changeLabel} sortKeyName="changePercent" className="justify-end" />
         <div
-          className="text-xs font-semibold uppercase tracking-wide text-right hidden sm:flex items-center justify-end cursor-help"
+          className="text-xs font-semibold uppercase tracking-wide text-right hidden sm:flex items-center justify-end gap-1 cursor-help"
           style={{ color: 'var(--text-muted)' }}
-          title="52-Week Range: Shows where the current price sits between its 52-week low and high. Green = near high, Yellow = mid-range, Red = near low"
+          title="52-Week Range indicator shows where the stock price is compared to its yearly low and high. Hover over the bar for details.
+
+Green bar = Stock is near its 52-week HIGH (good momentum)
+Yellow bar = Stock is in the middle range
+Red bar = Stock is near its 52-week LOW"
         >
           52W
         </div>
@@ -186,8 +223,17 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
               // Use live data if available, fallback to static
               const live = liveData[stock.symbol];
               const price = live?.price || stock.price;
-              const changePercent = live?.changePercent ?? stock.changePercent;
               const volume = live?.volume || stock.volume;
+
+              // Get change percent based on selected period
+              let changePercent = live?.changePercent ?? stock.changePercent;
+              if (live) {
+                if (changePeriod === 'week') {
+                  changePercent = live.changePercentWeek ?? changePercent;
+                } else if (changePeriod === 'month') {
+                  changePercent = live.changePercentMonth ?? changePercent;
+                }
+              }
               const isPositive = changePercent >= 0;
               const isInWatchlist = watchlistSymbols.has(stock.symbol);
 
@@ -200,7 +246,7 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
                 <Link
                   key={stock.symbol}
                   href={`/stock/${stock.symbol}`}
-                  className="grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 sm:gap-3 px-2 sm:px-4 items-center border-b hover:bg-opacity-50 transition-colors"
+                  className="grid grid-cols-[32px_1fr_minmax(70px,auto)_minmax(55px,auto)] sm:grid-cols-[32px_1fr_minmax(80px,auto)_minmax(60px,auto)_48px_minmax(50px,auto)_minmax(70px,auto)] gap-2 sm:gap-3 px-2 sm:px-4 items-center border-b hover:bg-opacity-50 transition-colors"
                   style={{
                     height: ROW_HEIGHT,
                     borderColor: 'var(--border)',
@@ -210,7 +256,7 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   {/* Watchlist star */}
-                  <div className="w-8 flex justify-center">
+                  <div className="flex justify-center">
                     <button
                       onClick={(e) => toggleWatchlist(stock.symbol, e)}
                       className="p-1 rounded-full hover:bg-opacity-20 transition-colors"
@@ -254,9 +300,12 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
                     <div
                       className="w-10 h-1.5 rounded-full overflow-hidden"
                       style={{ backgroundColor: 'var(--bg-secondary)' }}
-                      title={position52W !== null
-                        ? `${Math.round(position52W)}% between 52W low and high`
-                        : 'Loading...'
+                      title={position52W !== null && live
+                        ? `52-Week Position: ${Math.round(position52W)}%\n` +
+                          `Low: ₹${live.fiftyTwoWeekLow?.toLocaleString('en-IN')}\n` +
+                          `High: ₹${live.fiftyTwoWeekHigh?.toLocaleString('en-IN')}\n` +
+                          (position52W >= 80 ? '● Near yearly high' : position52W <= 20 ? '● Near yearly low' : '● Mid-range')
+                        : 'Loading 52-week data...'
                       }
                     >
                       {position52W !== null && (
