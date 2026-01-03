@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { Clock, Search, TrendingUp, TrendingDown, Sparkles, Calendar, IndianRupee, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Clock, Search, TrendingUp, TrendingDown, Sparkles, Calendar, IndianRupee, ArrowRight, HelpCircle, X } from 'lucide-react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { formatPrice, formatIndianNumber } from '@/lib/formatters';
-import allStocks from '@/data/allStocks.json';
 
 interface StockOption {
   symbol: string;
@@ -53,6 +52,8 @@ const TIME_PERIODS = [
 
 export default function TimeMachinePage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<StockOption[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockOption | null>(null);
   const [investmentAmount, setInvestmentAmount] = useState(10000);
   const [selectedYears, setSelectedYears] = useState(5);
@@ -62,19 +63,47 @@ export default function TimeMachinePage() {
   const [showResults, setShowResults] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
-  // Search stocks
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2) return [];
-    const query = searchQuery.toLowerCase();
-    return (allStocks as StockOption[])
-      .filter(
-        (s) =>
-          s.name?.toLowerCase().includes(query) ||
-          s.shortName?.toLowerCase().includes(query) ||
-          s.symbol?.includes(query)
-      )
-      .slice(0, 8);
+  // Search stocks using Yahoo Finance API
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`, {
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setSearchResults(
+            (data.results || []).map((r: { symbol: string; name: string; shortName: string }) => ({
+              symbol: r.symbol,
+              name: r.name,
+              shortName: r.shortName,
+            }))
+          );
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error('Search error:', err);
+        }
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [searchQuery]);
 
   // Track fetched periods to avoid duplicate calls
@@ -519,7 +548,16 @@ export default function TimeMachinePage() {
                   </div>
                 </div>
                 <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                  <div style={{ color: 'var(--text-muted)' }}>CAGR</div>
+                  <div className="flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                    CAGR
+                    <button
+                      onClick={() => setShowHelp(true)}
+                      className="p-0.5 rounded-full"
+                      aria-label="What is CAGR?"
+                    >
+                      <HelpCircle size={12} />
+                    </button>
+                  </div>
                   <div
                     className="font-semibold"
                     style={{ color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}
@@ -641,6 +679,76 @@ export default function TimeMachinePage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {showHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl p-5"
+            style={{ backgroundColor: 'var(--bg-card)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Time Machine Terms
+              </h2>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="p-1 rounded-full hover:bg-[var(--bg-secondary)]"
+              >
+                <X size={20} style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                  CAGR (Compound Annual Growth Rate)
+                </div>
+                <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  The average yearly return on your investment, accounting for compounding. It shows what consistent annual return would be needed to grow from your initial investment to the final value.
+                </p>
+                <div
+                  className="p-2 rounded text-xs font-mono"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                >
+                  CAGR = (Final Value / Initial Value)^(1/Years) - 1
+                </div>
+              </div>
+
+              <div className="pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Total Return %
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  The overall percentage gain or loss on your investment from start to finish, without considering time.
+                </p>
+              </div>
+
+              <div className="pb-3" style={{ borderColor: 'var(--border)' }}>
+                <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Shares Bought
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  The number of shares you could have purchased with your investment amount at the historical price. This is a fractional number for illustration purposes.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowHelp(false)}
+              className="w-full mt-4 py-2.5 rounded-lg font-medium text-sm"
+              style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}

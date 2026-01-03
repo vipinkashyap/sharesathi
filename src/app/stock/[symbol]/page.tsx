@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Star, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Star, RefreshCw, HelpCircle, X } from 'lucide-react';
 import { useWatchlistStore } from '@/store/watchlistStore';
 import { useLiveStock } from '@/hooks/useLiveStock';
 import { useNews } from '@/hooks/useNews';
@@ -25,6 +25,7 @@ export default function StockDetailPage() {
   const { isInAnyWatchlist } = useWatchlistStore();
   const inAnyWatchlist = isInAnyWatchlist(symbol);
   const [showPicker, setShowPicker] = useState(false);
+  const [showTermsHelp, setShowTermsHelp] = useState(false);
 
   const handleWatchlistClick = () => {
     setShowPicker(true);
@@ -111,15 +112,28 @@ export default function StockDetailPage() {
 
       {/* Price Section */}
       <div className="px-4 py-4">
-        <PriceDisplay
-          price={stock.price}
-          change={stock.change}
-          changePercent={stock.changePercent}
-          size="lg"
-        />
-        <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
-          {isLive ? 'Live data from Yahoo Finance' : 'Showing cached data'}
-        </p>
+        {isLive || stock.price > 0 ? (
+          <>
+            <PriceDisplay
+              price={stock.price}
+              change={stock.change}
+              changePercent={stock.changePercent}
+              size="lg"
+            />
+            <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+              {isLive ? 'Live data from Yahoo Finance' : 'Cached data - tap refresh for latest'}
+            </p>
+          </>
+        ) : (
+          <div className="py-4">
+            <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Price data unavailable
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Tap refresh to try again
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Chart */}
@@ -136,9 +150,19 @@ export default function StockDetailPage() {
 
       {/* Stock Details */}
       <div className="px-4 space-y-4">
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-          Details
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Details
+          </h2>
+          <button
+            onClick={() => setShowTermsHelp(true)}
+            className="p-1 rounded-full hover:bg-[var(--bg-secondary)] transition-colors"
+            title="What do these terms mean?"
+            aria-label="Help"
+          >
+            <HelpCircle size={16} style={{ color: 'var(--text-muted)' }} />
+          </button>
+        </div>
         <Card>
           <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
             <DetailRow label="Company Name" value={stock.name} />
@@ -199,6 +223,68 @@ export default function StockDetailPage() {
         stockSymbol={symbol}
         stockName={stock.name}
       />
+
+      {/* Terms Help Modal */}
+      {showTermsHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowTermsHelp(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl p-5 max-h-[80vh] overflow-auto"
+            style={{ backgroundColor: 'var(--bg-card)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Stock Terms Explained
+              </h2>
+              <button
+                onClick={() => setShowTermsHelp(false)}
+                className="p-1 rounded-full hover:bg-[var(--bg-secondary)]"
+              >
+                <X size={20} style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <TermDefinition
+                term="Open"
+                definition="The price at which the stock started trading today when the market opened."
+              />
+              <TermDefinition
+                term="Day Range"
+                definition="The lowest and highest prices the stock traded at during today's session."
+              />
+              <TermDefinition
+                term="52W Range"
+                definition="The lowest and highest prices over the past 52 weeks (1 year). Helps gauge if the stock is near its yearly high or low."
+              />
+              <TermDefinition
+                term="Market Cap"
+                definition="Market Capitalization = Stock Price × Total Shares. Represents the total value of the company. Cr = Crores (10 million), L Cr = Lakh Crores (1 trillion)."
+              />
+              <TermDefinition
+                term="Volume"
+                definition="Number of shares traded today. High volume often indicates strong interest in the stock."
+              />
+              <TermDefinition
+                term="Prev Close"
+                definition="Yesterday's closing price. Today's change % is calculated from this price."
+              />
+            </div>
+
+            <button
+              onClick={() => setShowTermsHelp(false)}
+              className="w-full mt-5 py-2.5 rounded-lg font-medium text-sm"
+              style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -210,6 +296,19 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <span className="font-medium text-right flex-1 ml-4" style={{ color: 'var(--text-primary)' }}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function TermDefinition({ term, definition }: { term: string; definition: string }) {
+  return (
+    <div className="pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+      <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+        {term}
+      </div>
+      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+        {definition}
+      </p>
     </div>
   );
 }

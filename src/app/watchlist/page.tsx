@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Star, Plus, X, Settings2, Lock } from 'lucide-react';
 import { Stock } from '@/types';
-import { getStocksBySymbols } from '@/services/stockApi';
 import { useWatchlistStore } from '@/store/watchlistStore';
 import { formatPrice, formatPercent } from '@/lib/formatters';
 import { Card } from '@/components/ui/Card';
@@ -29,15 +28,34 @@ export default function WatchlistPage() {
   const activeWatchlist = watchlists.find((w) => w.id === activeWatchlistId);
   const isReadOnly = activeWatchlist?.isDefault || false;
 
-  useEffect(() => {
-    if (activeWatchlist) {
-      const stockData = getStocksBySymbols(activeWatchlist.symbols);
-      setStocks(stockData);
-    } else {
-      setStocks([]);
+  // Fetch live stock data from batch API
+  const fetchStocks = useCallback(async (symbols: string[]) => {
+    if (symbols.length === 0) return [];
+    try {
+      const response = await fetch(`/api/stocks/batch?symbols=${symbols.join(',')}`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return symbols
+        .map((symbol) => data.stocks?.[symbol])
+        .filter((s): s is Stock => s !== undefined);
+    } catch {
+      return [];
     }
-    setLoading(false);
-  }, [activeWatchlist]);
+  }, []);
+
+  useEffect(() => {
+    const loadStocks = async () => {
+      setLoading(true);
+      if (activeWatchlist && activeWatchlist.symbols.length > 0) {
+        const stockData = await fetchStocks(activeWatchlist.symbols);
+        setStocks(stockData);
+      } else {
+        setStocks([]);
+      }
+      setLoading(false);
+    };
+    loadStocks();
+  }, [activeWatchlist, fetchStocks]);
 
   const handleWatchlistCreated = (id: string) => {
     setActiveWatchlist(id);

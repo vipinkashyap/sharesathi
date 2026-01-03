@@ -1,38 +1,68 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, X, TrendingUp } from 'lucide-react';
-import { Stock } from '@/types';
-import { searchStocks, getTopGainers } from '@/services/stockApi';
 import { StockCard } from '@/components/StockCard';
+
+interface SearchResult {
+  symbol: string;
+  name: string;
+  shortName: string;
+  exchange: string;
+}
+
+// Popular Indian stocks to show by default
+const POPULAR_STOCKS = [
+  { symbol: 'RELIANCE', name: 'Reliance Industries Ltd', shortName: 'RELIANCE' },
+  { symbol: 'TCS', name: 'Tata Consultancy Services Ltd', shortName: 'TCS' },
+  { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', shortName: 'HDFC BANK' },
+  { symbol: 'INFY', name: 'Infosys Ltd', shortName: 'INFOSYS' },
+  { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', shortName: 'ICICI BANK' },
+  { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd', shortName: 'BHARTI ARTL' },
+  { symbol: 'SBIN', name: 'State Bank of India', shortName: 'SBIN' },
+  { symbol: 'LT', name: 'Larsen & Toubro Ltd', shortName: 'L&T' },
+  { symbol: 'WIPRO', name: 'Wipro Ltd', shortName: 'WIPRO' },
+  { symbol: 'AXISBANK', name: 'Axis Bank Ltd', shortName: 'AXIS BANK' },
+];
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Stock[]>([]);
-  const [popularStocks, setPopularStocks] = useState<Stock[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Load popular stocks on mount
+  // Debounced search using Yahoo Finance API
   useEffect(() => {
-    setPopularStocks(getTopGainers(10));
-  }, []);
-
-  // Debounced search
-  useEffect(() => {
-    if (!query.trim()) {
+    if (!query.trim() || query.length < 2) {
       setResults([]);
       setIsSearching(false);
       return;
     }
 
     setIsSearching(true);
-    const timer = setTimeout(() => {
-      const searchResults = searchStocks(query);
-      setResults(searchResults);
-      setIsSearching(false);
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setResults(data.results || []);
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error('Search error:', err);
+        }
+      } finally {
+        setIsSearching(false);
+      }
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query]);
 
   const showResults = query.trim().length > 0;
@@ -100,21 +130,36 @@ export default function SearchPage() {
                   {results.map((stock) => (
                     <StockCard
                       key={stock.symbol}
-                      stock={stock}
+                      stock={{
+                        symbol: stock.symbol,
+                        name: stock.name,
+                        shortName: stock.shortName,
+                        price: 0,
+                        change: 0,
+                        changePercent: 0,
+                        marketCap: 0,
+                        timestamp: new Date(),
+                      }}
                       compact
                       showWatchlistButton
                     />
                   ))}
                 </div>
               </div>
-            ) : (
+            ) : query.length >= 2 ? (
               <div className="py-8 text-center">
                 <Search size={48} className="mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
                 <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
                   No stocks found
                 </p>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  Try searching with a different name or BSE code
+                  Try searching with a different name or symbol
+                </p>
+              </div>
+            ) : (
+              <div className="py-4 text-center">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  Type at least 2 characters to search
                 </p>
               </div>
             )}
@@ -135,10 +180,19 @@ export default function SearchPage() {
                 border: '1px solid var(--border)',
               }}
             >
-              {popularStocks.map((stock) => (
+              {POPULAR_STOCKS.map((stock) => (
                 <StockCard
                   key={stock.symbol}
-                  stock={stock}
+                  stock={{
+                    symbol: stock.symbol,
+                    name: stock.name,
+                    shortName: stock.shortName,
+                    price: 0,
+                    change: 0,
+                    changePercent: 0,
+                    marketCap: 0,
+                    timestamp: new Date(),
+                  }}
                   compact
                   showWatchlistButton
                 />

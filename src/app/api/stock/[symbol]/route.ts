@@ -23,59 +23,82 @@ export async function GET(
   const nseSymbol = getNseSymbol(symbol);
 
   try {
-    let data;
-    let result;
+    const yahooSymbol = nseSymbol ? `${nseSymbol}.NS` : `${symbol}.BO`;
 
-    // Try NSE first (more reliable with Yahoo Finance)
-    if (nseSymbol) {
-      const response = await fetch(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${nseSymbol}.NS?interval=1d&range=5d`,
+    // Fetch 1-day range for accurate daily change (chartPreviousClose = yesterday's close)
+    // and 5-day range for price history (for chart display)
+    const [dailyResponse, historyResponse] = await Promise.all([
+      fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1d`,
         {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          },
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
           next: { revalidate: 60 },
         }
-      );
-      if (response.ok) {
-        data = await response.json();
-        result = data.chart?.result?.[0];
+      ).catch(() => null),
+      fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=5d`,
+        {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+          next: { revalidate: 60 },
+        }
+      ).catch(() => null),
+    ]);
+
+    let dailyResult = null;
+    let historyResult = null;
+
+    // Helper to safely parse JSON response
+    async function safeJson(response: Response | null) {
+      if (!response?.ok) return null;
+      try {
+        const text = await response.text();
+        const data = JSON.parse(text);
+        return data.chart?.result?.[0] || null;
+      } catch {
+        return null;
       }
     }
 
-    // Fallback to BSE if NSE fails
-    if (!result || !result.timestamp || result.timestamp.length === 0) {
-      const response = await fetch(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=1d&range=5d`,
-        {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          },
-          next: { revalidate: 60 },
-        }
-      );
+    dailyResult = await safeJson(dailyResponse);
+    historyResult = await safeJson(historyResponse);
 
-      if (!response.ok) {
-        return NextResponse.json(
-          { error: 'Stock not available on Yahoo Finance', symbol },
-          { status: 404 }
-        );
-      }
+    // Fallback to BSE if NSE failed
+    if (!dailyResult && nseSymbol) {
+      const [bseDailyResp, bseHistoryResp] = await Promise.all([
+        fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=1d&range=1d`,
+          {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            next: { revalidate: 60 },
+          }
+        ).catch(() => null),
+        fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=1d&range=5d`,
+          {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            next: { revalidate: 60 },
+          }
+        ).catch(() => null),
+      ]);
 
-      data = await response.json();
-      result = data.chart?.result?.[0];
+      dailyResult = await safeJson(bseDailyResp);
+      historyResult = await safeJson(bseHistoryResp);
     }
 
-    if (!result) {
+    if (!dailyResult) {
       return NextResponse.json(
-        { error: 'Stock not found', symbol },
+        { error: 'Stock not available on Yahoo Finance', symbol },
         { status: 404 }
       );
     }
 
-    const meta = result.meta;
-    const quote = result.indicators?.quote?.[0];
-    const timestamps = result.timestamp || [];
+    // Use daily result for accurate price and change
+    const meta = dailyResult.meta;
+
+    // Use history result for price history (if available), fallback to daily
+    const historyData = historyResult || dailyResult;
+    const quote = historyData.indicators?.quote?.[0];
+    const timestamps = historyData.timestamp || [];
     const closes = quote?.close || [];
 
     // Build price history
@@ -89,6 +112,7 @@ export async function GET(
     })).filter((p: { close: number | null }) => p.close !== null);
 
     const price = meta.regularMarketPrice || 0;
+    // IMPORTANT: Use chartPreviousClose from 1-day range = yesterday's close
     const prevClose = meta.chartPreviousClose || meta.previousClose || price;
     const change = price - prevClose;
     const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;

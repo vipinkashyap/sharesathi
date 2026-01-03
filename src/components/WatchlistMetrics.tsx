@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { TrendingUp, TrendingDown, Activity, PieChart } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { TrendingUp, TrendingDown, Activity, PieChart, HelpCircle, X } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Stock } from '@/types';
 import { formatPrice, formatMarketCap } from '@/lib/formatters';
@@ -11,6 +11,7 @@ interface WatchlistMetricsProps {
 }
 
 export function WatchlistMetrics({ stocks }: WatchlistMetricsProps) {
+  const [showHelp, setShowHelp] = useState(false);
   const metrics = useMemo(() => {
     if (stocks.length === 0) {
       return {
@@ -72,6 +73,13 @@ export function WatchlistMetrics({ stocks }: WatchlistMetricsProps) {
             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
               Watchlist Performance
             </span>
+            <button
+              onClick={() => setShowHelp(true)}
+              className="p-0.5 rounded-full ml-auto"
+              aria-label="What do these metrics mean?"
+            >
+              <HelpCircle size={12} style={{ color: 'var(--text-muted)' }} />
+            </button>
           </div>
           <div
             className="text-xl font-bold"
@@ -198,6 +206,79 @@ export function WatchlistMetrics({ stocks }: WatchlistMetricsProps) {
               </div>
             </Card>
           )}
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {showHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl p-5"
+            style={{ backgroundColor: 'var(--bg-card)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Watchlist Metrics
+              </h2>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="p-1 rounded-full hover:bg-[var(--bg-secondary)]"
+              >
+                <X size={20} style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Average Change %
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  The simple average of today&apos;s percentage change across all stocks in your watchlist. Shows overall watchlist performance at a glance.
+                </p>
+              </div>
+
+              <div className="pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Total Market Cap
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Combined market capitalization of all companies in your watchlist. Cr = Crores (10 million), L Cr = Lakh Crores (1 trillion).
+                </p>
+              </div>
+
+              <div className="pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Today&apos;s Movement Bar
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Visual breakdown showing how many stocks are up (green), unchanged (gray), or down (red) today.
+                </p>
+              </div>
+
+              <div className="pb-3" style={{ borderColor: 'var(--border)' }}>
+                <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Top Gainer / Loser
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  The best and worst performing stocks in your watchlist today, based on percentage change.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowHelp(false)}
+              className="w-full mt-4 py-2.5 rounded-lg font-medium text-sm"
+              style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+            >
+              Got it
+            </button>
+          </div>
         </div>
       )}
     </div>

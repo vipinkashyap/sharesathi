@@ -86,6 +86,8 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
   const [loading, setLoading] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<{ price: number; date: string; x: number; y: number } | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  // chartPreviousClose from Yahoo API - the price at the START of the range
+  const [rangeRefPrice, setRangeRefPrice] = useState<number | null>(null);
 
   const width = 320;
   const height = 180;
@@ -107,6 +109,12 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
           if (data.priceHistory && data.priceHistory.length > 0) {
             setChartData(data.priceHistory);
           }
+          // Use Yahoo's chartPreviousClose for accurate reference price
+          if (data.chartPreviousClose) {
+            setRangeRefPrice(data.chartPreviousClose);
+          } else {
+            setRangeRefPrice(null);
+          }
         }
       } catch (err) {
         console.error('Error fetching chart data:', err);
@@ -124,8 +132,12 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
       return { pathD: '', areaPath: '', points: [], minPrice: 0, maxPrice: 0, isPositive: true, referencePrice: previousClose };
     }
 
-    // For intraday, compare to previous close. For longer periods, compare to first price
-    const refPrice = selectedRange === '1D' ? previousClose : prices[0];
+    // Use Yahoo's chartPreviousClose if available - this is the industry standard reference
+    // For 1D, we still use previousClose from stock data (same as header)
+    // For other periods, use rangeRefPrice from chart API (Yahoo's chartPreviousClose)
+    const refPrice = selectedRange === '1D'
+      ? previousClose
+      : (rangeRefPrice || prices[0]); // Fallback to first price if API didn't provide it
     const positive = prices[prices.length - 1] >= refPrice;
 
     const min = Math.min(...prices);
@@ -163,7 +175,7 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
     area += ' Z';
 
     return { pathD: line, areaPath: area, points: pts, minPrice: min, maxPrice: max, isPositive: positive, referencePrice: refPrice };
-  }, [chartData, selectedRange, previousClose]);
+  }, [chartData, selectedRange, previousClose, rangeRefPrice]);
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (points.length === 0) return;
@@ -407,9 +419,11 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
       {chartData.length > 0 && (
         <div className="text-center mt-3">
           {(() => {
-            // For 1D, use previous close as reference (matches header display)
-            // For longer periods, use first price in the range
-            const refPrice = selectedRange === '1D' ? previousClose : (chartData[0]?.close || previousClose);
+            // Use Yahoo's chartPreviousClose for consistent calculations
+            // For 1D, use previousClose (matches header). For others, use rangeRefPrice from API
+            const refPrice = selectedRange === '1D'
+              ? previousClose
+              : (rangeRefPrice || chartData[0]?.close || previousClose);
             const lastPrice = chartData[chartData.length - 1]?.close || currentPrice;
             const change = lastPrice - refPrice;
             const changePct = refPrice > 0 ? (change / refPrice) * 100 : 0;

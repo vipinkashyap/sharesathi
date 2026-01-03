@@ -29,10 +29,17 @@ export function useLiveStock(symbol: string) {
         setIsLive(true);
         setError(null);
       } else {
-        // API failed (404 or other) - use static data
+        // API failed (404 or other) - use static data for name only
         const staticStock = getStockBySymbol(symbol);
         if (staticStock) {
-          setStock({ ...staticStock, isLive: false });
+          // Don't trust static price/change data - it may be stale/corrupted
+          setStock({
+            ...staticStock,
+            price: 0,
+            change: 0,
+            changePercent: 0,
+            isLive: false,
+          });
           setIsLive(false);
           setError(null);
         } else {
@@ -41,10 +48,17 @@ export function useLiveStock(symbol: string) {
       }
     } catch (err) {
       console.error('Error fetching live stock:', err);
-      // Network error - use static data
+      // Network error - use static data for name only
       const staticStock = getStockBySymbol(symbol);
       if (staticStock) {
-        setStock({ ...staticStock, isLive: false });
+        // Don't trust static price/change data - it may be stale/corrupted
+        setStock({
+          ...staticStock,
+          price: 0,
+          change: 0,
+          changePercent: 0,
+          isLive: false,
+        });
         setIsLive(false);
         setError(null);
       } else {

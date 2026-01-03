@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { MessageCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { MarketStatus } from '@/components/MarketStatus';
@@ -10,7 +10,6 @@ import { TopMovers } from '@/components/TopMovers';
 import { NewsCard } from '@/components/NewsCard';
 import { ChatAssistant } from '@/components/ChatAssistant';
 import { useWatchlistStore } from '@/store/watchlistStore';
-import { getStocksBySymbols, getTopGainers, getTopLosers } from '@/services/stockApi';
 import { useNews } from '@/hooks/useNews';
 import { Stock } from '@/types';
 
@@ -26,18 +25,45 @@ export default function Dashboard() {
   const [showChat, setShowChat] = useState(false);
   const { news, loading: newsLoading } = useNews();
 
-  useEffect(() => {
-    // Load stock data for active watchlist
-    if (activeWatchlist) {
-      const stocks = getStocksBySymbols(activeWatchlist.symbols);
-      setWatchlistStocks(stocks);
-    } else {
-      setWatchlistStocks([]);
+  // Fetch live stock data from batch API
+  const fetchStocks = useCallback(async (symbols: string[]) => {
+    if (symbols.length === 0) return [];
+    try {
+      const response = await fetch(`/api/stocks/batch?symbols=${symbols.join(',')}`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return symbols
+        .map((symbol) => data.stocks?.[symbol])
+        .filter((s): s is Stock => s !== undefined && s.price > 0);
+    } catch {
+      return [];
     }
-    setGainers(getTopGainers(5));
-    setLosers(getTopLosers(5));
-    setLoading(false);
-  }, [activeWatchlist]);
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+
+      // Fetch watchlist stocks
+      if (activeWatchlist && activeWatchlist.symbols.length > 0) {
+        const stocks = await fetchStocks(activeWatchlist.symbols);
+        setWatchlistStocks(stocks);
+
+        // Calculate gainers/losers from watchlist
+        const sorted = [...stocks].sort((a, b) => b.changePercent - a.changePercent);
+        setGainers(sorted.filter((s) => s.changePercent > 0).slice(0, 5));
+        setLosers(sorted.filter((s) => s.changePercent < 0).slice(-5).reverse());
+      } else {
+        setWatchlistStocks([]);
+        setGainers([]);
+        setLosers([]);
+      }
+
+      setLoading(false);
+    };
+
+    loadData();
+  }, [activeWatchlist, fetchStocks]);
 
   return (
     <div className="page-enter">

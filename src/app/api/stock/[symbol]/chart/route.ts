@@ -66,6 +66,7 @@ export async function GET(
         interval,
         range,
         priceHistory: [],
+        chartPreviousClose: null,
       });
     }
 
@@ -84,11 +85,16 @@ export async function GET(
       }))
       .filter((p: { close: number | null }) => p.close !== null && p.close > 0);
 
+    // Include chartPreviousClose from Yahoo - this is the reference price for change calculation
+    // It represents the price at the START of the range (before the first data point)
+    const chartPreviousClose = result.meta?.chartPreviousClose || null;
+
     return NextResponse.json({
       symbol,
       interval,
       range,
       priceHistory,
+      chartPreviousClose, // Price before the range started - use this for % change
     });
   } catch (error) {
     console.error(`Error fetching chart for ${symbol}:`, error);
@@ -98,6 +104,7 @@ export async function GET(
       interval,
       range,
       priceHistory: [],
+      chartPreviousClose: null,
     });
   }
 }
