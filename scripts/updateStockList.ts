@@ -4,7 +4,8 @@
  * Run with: npx tsx scripts/updateStockList.ts
  *
  * Sources:
- * - NSE: https://archives.nseindia.com/content/equities/EQUITY_L.csv (reliable)
+ * - BSE: https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w (primary - works from cloud)
+ * - NSE: https://archives.nseindia.com/content/equities/EQUITY_L.csv (fallback - blocked from cloud)
  * - Existing data: Preserves price/market cap from existing stock data
  */
 
@@ -22,6 +23,69 @@ interface Stock {
   marketCap: number;
   isin?: string;
   nseSymbol?: string;
+}
+
+interface BSEScripData {
+  Scrip_cd: string;
+  Scrip_Name: string;
+  ISIN_NUMBER: string;
+  Mktcap: string;
+  // other fields we don't need
+}
+
+async function fetchBSEStockList(): Promise<Stock[]> {
+  console.log('Fetching BSE official equity list...');
+
+  try {
+    const response = await fetch(
+      'https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w?segment=Equity&status=Active',
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Referer': 'https://www.bseindia.com/',
+          'Origin': 'https://www.bseindia.com',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const text = await response.text();
+
+    // Check if response is HTML (error page) instead of JSON
+    if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+      throw new Error('BSE returned HTML instead of JSON (likely blocked)');
+    }
+
+    const data: BSEScripData[] = JSON.parse(text);
+    const stocks: Stock[] = [];
+
+    for (const item of data) {
+      if (item.Scrip_cd && item.Scrip_Name) {
+        stocks.push({
+          symbol: item.Scrip_cd,
+          name: item.Scrip_Name,
+          shortName: item.Scrip_Name.slice(0, 15).toUpperCase(),
+          price: 0,
+          previousClose: 0,
+          change: 0,
+          changePercent: 0,
+          marketCap: parseFloat(item.Mktcap) || 0,
+          isin: item.ISIN_NUMBER,
+        });
+      }
+    }
+
+    console.log(`✓ Fetched ${stocks.length} stocks from BSE official list`);
+    return stocks;
+  } catch (error) {
+    console.log('✗ BSE fetch failed (this is normal - BSE blocks most requests)');
+    return [];
+  }
 }
 
 async function fetchNSEStockList(): Promise<Stock[]> {
@@ -105,20 +169,23 @@ async function main() {
   }
 
   // Create lookup maps
-  const existingBySymbol = new Map(existingStocks.map(s => [s.symbol, s]));
+  const existingByIsin = new Map(existingStocks.filter(s => s.isin).map(s => [s.isin!, s]));
   const existingByName = new Map(existingStocks.map(s => [s.name.toLowerCase().trim(), s]));
 
-  // Fetch official NSE list
-  const nseStocks = await fetchNSEStockList();
+  // Try BSE first (works from cloud), then NSE as fallback
+  console.log('\n--- Fetching stock lists ---');
+  let bseStocks = await fetchBSEStockList();
+  let nseStocks = await fetchNSEStockList();
 
-  if (nseStocks.length === 0) {
-    console.log('\n⚠ Could not fetch NSE data (likely blocked by NSE - returns 503 from cloud IPs).');
-    console.log('This is expected when running from GitHub Actions or other cloud environments.');
-    console.log('Stock list remains unchanged. Run locally to update the list.');
-    process.exit(0); // Exit successfully - don't fail the workflow
+  if (bseStocks.length === 0 && nseStocks.length === 0) {
+    console.log('\n⚠ Could not fetch from BSE or NSE.');
+    console.log('Stock list remains unchanged.');
+    process.exit(0);
   }
 
-  // Merge: Keep ALL existing stocks (with price data) + add new from NSE
+  console.log(`\nTotal fetched: BSE=${bseStocks.length}, NSE=${nseStocks.length}`);
+
+  // Merge: Keep ALL existing stocks (with price data) + add new from BSE/NSE
   const mergedMap = new Map<string, Stock>();
 
   // First, add all existing stocks (they have price data)
@@ -126,17 +193,38 @@ async function main() {
     mergedMap.set(stock.symbol, stock);
   }
 
-  // Add NSE stocks if not already present (try matching by name too)
+  // Add BSE stocks if not already present
+  let newFromBSE = 0;
+  for (const bseStock of bseStocks) {
+    if (mergedMap.has(bseStock.symbol)) continue;
+
+    // Try to match by ISIN or name
+    const isinMatch = bseStock.isin ? existingByIsin.get(bseStock.isin) : undefined;
+    const nameMatch = existingByName.get(bseStock.name.toLowerCase().trim());
+    const match = isinMatch || nameMatch;
+
+    if (match) {
+      mergedMap.set(bseStock.symbol, {
+        ...bseStock,
+        price: match.price,
+        change: match.change,
+        changePercent: match.changePercent,
+        marketCap: match.marketCap || bseStock.marketCap,
+        nseSymbol: match.nseSymbol,
+      });
+    } else {
+      mergedMap.set(bseStock.symbol, bseStock);
+      newFromBSE++;
+    }
+  }
+
+  // Add NSE stocks if not already present
   let newFromNSE = 0;
   for (const nseStock of nseStocks) {
-    // Skip if we already have this symbol
     if (mergedMap.has(nseStock.symbol)) continue;
 
-    // Try to find by name match (NSE might use different symbol than BSE)
     const nameMatch = existingByName.get(nseStock.name.toLowerCase().trim());
     if (nameMatch) {
-      // We have price data for this stock under a different symbol
-      // Add the NSE symbol as an alias
       mergedMap.set(nseStock.symbol, {
         ...nseStock,
         price: nameMatch.price,
@@ -145,7 +233,6 @@ async function main() {
         marketCap: nameMatch.marketCap,
       });
     } else {
-      // Genuinely new stock
       mergedMap.set(nseStock.symbol, nseStock);
       newFromNSE++;
     }
@@ -172,8 +259,10 @@ async function main() {
 
   console.log('\n=== Update Summary ===');
   console.log(`Total stocks before: ${existingStocks.length}`);
+  console.log(`Fetched from BSE:    ${bseStocks.length}`);
   console.log(`Fetched from NSE:    ${nseStocks.length}`);
-  console.log(`New stocks added:    ${newFromNSE}`);
+  console.log(`New from BSE:        ${newFromBSE}`);
+  console.log(`New from NSE:        ${newFromNSE}`);
   console.log(`Total stocks after:  ${mergedStocks.length}`);
   console.log(`With price data:     ${mergedStocks.filter(s => s.price > 0).length}`);
 
