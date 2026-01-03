@@ -45,80 +45,110 @@ export async function POST(request: NextRequest) {
       limitedSymbols.map(async (symbol: string) => {
         const nseSymbol = getNseSymbol(symbol);
 
-        // Try NSE first, then BSE
-        let data = null;
-        let result = null;
+        // Determine the Yahoo symbol to use
+        const yahooSymbol = nseSymbol ? `${nseSymbol}.NS` : `${symbol}.BO`;
 
-        // Fetch 10 years of weekly data to calculate all period changes
-        if (nseSymbol) {
-          try {
-            const response = await fetch(
-              `https://query1.finance.yahoo.com/v8/finance/chart/${nseSymbol}.NS?interval=1wk&range=10y`,
-              {
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                },
-                signal: AbortSignal.timeout(5000), // 5 second timeout per stock
-              }
-            );
-            if (response.ok) {
-              data = await response.json();
-              result = data.chart?.result?.[0];
+        // Fetch both daily (for accurate 1D/1W) and weekly (for 1M/1Y/5Y/10Y) data in parallel
+        const [dailyResponse, weeklyResponse] = await Promise.all([
+          fetch(
+            `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1mo`,
+            {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+              signal: AbortSignal.timeout(5000),
             }
-          } catch {
-            // NSE failed, try BSE
-          }
+          ).catch(() => null),
+          fetch(
+            `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1wk&range=10y`,
+            {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+              signal: AbortSignal.timeout(5000),
+            }
+          ).catch(() => null),
+        ]);
+
+        // Try BSE fallback if NSE failed
+        let dailyResult = null;
+        let weeklyResult = null;
+
+        if (dailyResponse?.ok) {
+          const data = await dailyResponse.json();
+          dailyResult = data.chart?.result?.[0];
+        }
+        if (weeklyResponse?.ok) {
+          const data = await weeklyResponse.json();
+          weeklyResult = data.chart?.result?.[0];
         }
 
-        // Fallback to BSE
-        if (!result) {
+        // Fallback to BSE if NSE failed
+        if (!dailyResult && nseSymbol) {
           try {
-            const response = await fetch(
-              `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=1wk&range=10y`,
+            const resp = await fetch(
+              `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=1d&range=1mo`,
               {
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                },
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
                 signal: AbortSignal.timeout(5000),
               }
             );
-            if (response.ok) {
-              data = await response.json();
-              result = data.chart?.result?.[0];
+            if (resp.ok) {
+              const data = await resp.json();
+              dailyResult = data.chart?.result?.[0];
+            }
+          } catch {
+            // BSE also failed
+          }
+        }
+        if (!weeklyResult && nseSymbol) {
+          try {
+            const resp = await fetch(
+              `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=1wk&range=10y`,
+              {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+                signal: AbortSignal.timeout(5000),
+              }
+            );
+            if (resp.ok) {
+              const data = await resp.json();
+              weeklyResult = data.chart?.result?.[0];
             }
           } catch {
             // BSE also failed
           }
         }
 
-        if (!result) {
+        // Need at least daily data for basic info
+        if (!dailyResult) {
           return { symbol, error: 'not_found' };
         }
 
-        const meta = result.meta;
+        const meta = dailyResult.meta;
         const price = meta.regularMarketPrice || 0;
+        // Use daily data's chartPreviousClose for accurate daily change
         const prevClose = meta.chartPreviousClose || meta.previousClose || price;
         const change = price - prevClose;
         const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
 
         // Get historical data for period calculations
-        const timestamps = result.timestamp || [];
-        const closes = result.indicators?.quote?.[0]?.close || [];
+        // Use daily data for week calculation, weekly data for longer periods
+        const dailyTimestamps = dailyResult.timestamp || [];
+        const dailyCloses = dailyResult.indicators?.quote?.[0]?.close || [];
+
+        // Weekly data for longer periods (may not exist for newer stocks)
+        const weeklyTimestamps = weeklyResult?.timestamp || [];
+        const weeklyCloses = weeklyResult?.indicators?.quote?.[0]?.close || [];
 
         // Calculate target dates (in seconds, Yahoo returns UNIX timestamps)
         const now = Math.floor(Date.now() / 1000);
         const oneWeekAgo = now - (7 * 24 * 60 * 60);
-        const oneMonthAgo = now - (30 * 24 * 60 * 60);
         const oneYearAgo = now - (365 * 24 * 60 * 60);
         const fiveYearsAgo = now - (5 * 365 * 24 * 60 * 60);
         const tenYearsAgo = now - (10 * 365 * 24 * 60 * 60);
 
         // Helper function to find price at or before a target timestamp
-        function findPriceAtDate(targetTimestamp: number): number {
+        function findPriceAtDate(timestamps: number[], closes: (number | null)[], targetTimestamp: number): number {
           let foundPrice = 0;
           for (let i = 0; i < timestamps.length; i++) {
-            if (timestamps[i] <= targetTimestamp && closes[i] !== null && closes[i] > 0) {
-              foundPrice = closes[i];
+            if (timestamps[i] <= targetTimestamp && closes[i] !== null && closes[i]! > 0) {
+              foundPrice = closes[i]!;
             }
           }
           return foundPrice;
@@ -132,48 +162,47 @@ export async function POST(request: NextRequest) {
           return 0;
         }
 
-        // Weekly change (use last data point if no exact match - weekly data may not have last week)
-        let weekAgoPrice = findPriceAtDate(oneWeekAgo);
-        if (weekAgoPrice === 0 && closes.length >= 2) {
-          // Use second-to-last data point for weekly (since data is weekly interval)
-          for (let i = closes.length - 2; i >= 0; i--) {
-            if (closes[i] !== null && closes[i] > 0) {
-              weekAgoPrice = closes[i];
+        // Weekly change - use daily data for accuracy
+        let weekAgoPrice = findPriceAtDate(dailyTimestamps, dailyCloses, oneWeekAgo);
+        if (weekAgoPrice === 0 && dailyCloses.length >= 5) {
+          // Fallback: ~5 trading days back
+          for (let i = dailyCloses.length - 6; i >= 0; i--) {
+            if (dailyCloses[i] !== null && dailyCloses[i]! > 0) {
+              weekAgoPrice = dailyCloses[i]!;
               break;
             }
           }
         }
         const changePercentWeek = calcChange(weekAgoPrice, price);
 
-        // Monthly change
-        let monthAgoPrice = findPriceAtDate(oneMonthAgo);
-        if (monthAgoPrice === 0 && closes.length >= 5) {
-          // Fallback: ~4 weeks back
-          const targetIndex = Math.max(0, closes.length - 5);
-          for (let i = targetIndex; i >= 0; i--) {
-            if (closes[i] !== null && closes[i] > 0) {
-              monthAgoPrice = closes[i];
+        // Monthly change - use daily data (we have 1 month)
+        let monthAgoPrice = 0;
+        if (dailyCloses.length > 0) {
+          // First valid close in daily data (~1 month ago)
+          for (let i = 0; i < dailyCloses.length; i++) {
+            if (dailyCloses[i] !== null && dailyCloses[i]! > 0) {
+              monthAgoPrice = dailyCloses[i]!;
               break;
             }
           }
         }
         const changePercentMonth = calcChange(monthAgoPrice, price);
 
-        // Yearly change
-        const yearAgoPrice = findPriceAtDate(oneYearAgo);
+        // Yearly change - use weekly data
+        const yearAgoPrice = findPriceAtDate(weeklyTimestamps, weeklyCloses, oneYearAgo);
         const changePercentYear = calcChange(yearAgoPrice, price);
 
-        // 5-year change
-        const fiveYearAgoPrice = findPriceAtDate(fiveYearsAgo);
+        // 5-year change - use weekly data
+        const fiveYearAgoPrice = findPriceAtDate(weeklyTimestamps, weeklyCloses, fiveYearsAgo);
         const changePercent5Year = calcChange(fiveYearAgoPrice, price);
 
-        // 10-year change (use first available data if stock is newer)
-        let tenYearAgoPrice = findPriceAtDate(tenYearsAgo);
-        if (tenYearAgoPrice === 0 && closes.length > 0) {
+        // 10-year change - use weekly data (use first available data if stock is newer)
+        let tenYearAgoPrice = findPriceAtDate(weeklyTimestamps, weeklyCloses, tenYearsAgo);
+        if (tenYearAgoPrice === 0 && weeklyCloses.length > 0) {
           // Use earliest available data
-          for (let i = 0; i < closes.length; i++) {
-            if (closes[i] !== null && closes[i] > 0) {
-              tenYearAgoPrice = closes[i];
+          for (let i = 0; i < weeklyCloses.length; i++) {
+            if (weeklyCloses[i] !== null && weeklyCloses[i]! > 0) {
+              tenYearAgoPrice = weeklyCloses[i]!;
               break;
             }
           }
