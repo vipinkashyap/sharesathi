@@ -27,13 +27,25 @@ interface IndexData {
   unchanged: number;
 }
 
-// Available indices
+// Available indices - organized by category
 const INDICES = [
+  // Broad market
+  { id: 'nifty500', name: 'All (500)' },
   { id: 'nifty50', name: 'Nifty 50' },
-  { id: 'niftybank', name: 'Bank Nifty' },
-  { id: 'niftyit', name: 'Nifty IT' },
-  { id: 'niftynext50', name: 'Nifty Next 50' },
-  { id: 'niftymidcap50', name: 'Midcap 50' },
+  { id: 'nifty100', name: 'Nifty 100' },
+  { id: 'niftynext50', name: 'Next 50' },
+  // Sectors
+  { id: 'niftybank', name: 'Bank' },
+  { id: 'niftyit', name: 'IT' },
+  { id: 'niftypharma', name: 'Pharma' },
+  { id: 'niftyauto', name: 'Auto' },
+  { id: 'niftyfmcg', name: 'FMCG' },
+  { id: 'niftymetal', name: 'Metal' },
+  { id: 'niftyrealty', name: 'Realty' },
+  { id: 'niftyenergy', name: 'Energy' },
+  // Size-based
+  { id: 'niftymidcap50', name: 'Midcap' },
+  { id: 'niftysmallcap50', name: 'Smallcap' },
 ];
 
 type ViewMode = 'watchlist' | 'index';
@@ -42,7 +54,7 @@ export default function MarketPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('index');
   const [activeWatchlistId, setActiveWatchlistId] = useState<string | null>(null);
-  const [activeIndex, setActiveIndex] = useState('nifty50');
+  const [activeIndex, setActiveIndex] = useState('nifty500');
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [indexData, setIndexData] = useState<IndexData | null>(null);
   const [loading, setLoading] = useState(true);
