@@ -25,15 +25,36 @@ interface UseBatchStocksResult {
 const cache = new Map<string, { data: LiveStockData; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Get cached data for symbols immediately (sync)
+function getCachedData(symbols: string[]): Record<string, LiveStockData> {
+  const now = Date.now();
+  const result: Record<string, LiveStockData> = {};
+  for (const symbol of symbols) {
+    const cached = cache.get(symbol);
+    if (cached && now - cached.timestamp < CACHE_TTL) {
+      result[symbol] = cached.data;
+    }
+  }
+  return result;
+}
+
 export function useBatchStocks(symbols: string[]): UseBatchStocksResult {
-  const [liveData, setLiveData] = useState<Record<string, LiveStockData>>({});
+  // Initialize with cached data immediately
+  const [liveData, setLiveData] = useState<Record<string, LiveStockData>>(() =>
+    getCachedData(symbols.slice(0, 30))
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fetchingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const prevSymbolsRef = useRef<string>('');
 
   const fetchBatch = useCallback(async (symbolsToFetch: string[]) => {
-    if (symbolsToFetch.length === 0 || fetchingRef.current) return;
+    if (symbolsToFetch.length === 0) return;
+
+    // Cancel any in-flight request when new symbols come in
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
     // Check which symbols need fetching (not in cache or expired)
     const now = Date.now();
@@ -49,13 +70,19 @@ export function useBatchStocks(symbols: string[]): UseBatchStocksResult {
       }
     }
 
-    // If all data is cached, just use cache
-    if (uncachedSymbols.length === 0) {
+    // Always update with cached data first
+    if (Object.keys(cachedData).length > 0) {
       setLiveData(prev => ({ ...prev, ...cachedData }));
+    }
+
+    // If all data is cached, we're done
+    if (uncachedSymbols.length === 0) {
       return;
     }
 
-    fetchingRef.current = true;
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
     setIsLoading(true);
     setError(null);
 
@@ -64,6 +91,7 @@ export function useBatchStocks(symbols: string[]): UseBatchStocksResult {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ symbols: uncachedSymbols }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -71,7 +99,7 @@ export function useBatchStocks(symbols: string[]): UseBatchStocksResult {
       }
 
       const result = await response.json();
-      const newData: Record<string, LiveStockData> = { ...cachedData };
+      const newData: Record<string, LiveStockData> = {};
 
       // Update cache and result
       for (const [symbol, data] of Object.entries(result.stocks)) {
@@ -82,23 +110,35 @@ export function useBatchStocks(symbols: string[]): UseBatchStocksResult {
 
       setLiveData(prev => ({ ...prev, ...newData }));
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to fetch');
     } finally {
       setIsLoading(false);
-      fetchingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
-    // Only fetch if symbols changed
-    const symbolsKey = symbols.slice(0, 30).sort().join(',');
+    const limitedSymbols = symbols.slice(0, 30);
+    const symbolsKey = limitedSymbols.sort().join(',');
+
+    // If symbols changed, immediately show any cached data
+    if (symbolsKey !== prevSymbolsRef.current) {
+      const cached = getCachedData(limitedSymbols);
+      if (Object.keys(cached).length > 0) {
+        setLiveData(prev => ({ ...prev, ...cached }));
+      }
+    }
+
     if (symbolsKey === prevSymbolsRef.current) return;
     prevSymbolsRef.current = symbolsKey;
 
-    // Small delay to debounce rapid changes (scrolling)
+    // Reduced debounce - 150ms feels more responsive
     const timer = setTimeout(() => {
-      fetchBatch(symbols.slice(0, 30));
-    }, 300);
+      fetchBatch(limitedSymbols);
+    }, 150);
 
     return () => clearTimeout(timer);
   }, [symbols, fetchBatch]);

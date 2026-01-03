@@ -49,19 +49,22 @@ export async function POST(request: NextRequest) {
         const yahooSymbol = nseSymbol ? `${nseSymbol}.NS` : `${symbol}.BO`;
 
         // Fetch both daily (for accurate 1D/1W) and weekly (for 1M/1Y/5Y/10Y) data in parallel
+        // Next.js caches these requests for 60 seconds to reduce load
         const [dailyResponse, weeklyResponse] = await Promise.all([
           fetch(
             `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1mo`,
             {
               headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-              signal: AbortSignal.timeout(5000),
+              signal: AbortSignal.timeout(4000),
+              next: { revalidate: 60 }, // Cache for 60 seconds
             }
           ).catch(() => null),
           fetch(
             `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1wk&range=10y`,
             {
               headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-              signal: AbortSignal.timeout(5000),
+              signal: AbortSignal.timeout(4000),
+              next: { revalidate: 300 }, // Cache for 5 minutes (historical data doesn't change often)
             }
           ).catch(() => null),
         ]);
@@ -86,7 +89,8 @@ export async function POST(request: NextRequest) {
               `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=1d&range=1mo`,
               {
                 headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-                signal: AbortSignal.timeout(5000),
+                signal: AbortSignal.timeout(3000),
+                next: { revalidate: 60 },
               }
             );
             if (resp.ok) {
@@ -103,7 +107,8 @@ export async function POST(request: NextRequest) {
               `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.BO?interval=1wk&range=10y`,
               {
                 headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-                signal: AbortSignal.timeout(5000),
+                signal: AbortSignal.timeout(3000),
+                next: { revalidate: 300 },
               }
             );
             if (resp.ok) {
