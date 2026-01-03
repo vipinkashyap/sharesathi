@@ -347,10 +347,12 @@ export function InteractiveChart({ symbol, initialData, currentPrice, previousCl
       {chartData.length > 0 && (
         <div className="text-center mt-3">
           {(() => {
-            const firstPrice = chartData[0]?.close || referencePrice;
+            // For 1D, use previous close as reference (matches header display)
+            // For longer periods, use first price in the range
+            const refPrice = selectedRange === '1D' ? previousClose : (chartData[0]?.close || previousClose);
             const lastPrice = chartData[chartData.length - 1]?.close || currentPrice;
-            const change = lastPrice - firstPrice;
-            const changePct = firstPrice > 0 ? (change / firstPrice) * 100 : 0;
+            const change = lastPrice - refPrice;
+            const changePct = refPrice > 0 ? (change / refPrice) * 100 : 0;
             const isUp = change >= 0;
 
             return (

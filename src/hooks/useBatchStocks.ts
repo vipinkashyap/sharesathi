@@ -6,6 +6,9 @@ interface LiveStockData {
   changePercent: number;
   changePercentWeek: number;
   changePercentMonth: number;
+  changePercentYear: number;
+  changePercent5Year: number;
+  changePercent10Year: number;
   volume: number;
   fiftyTwoWeekHigh: number;
   fiftyTwoWeekLow: number;

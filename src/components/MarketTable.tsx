@@ -21,7 +21,7 @@ interface StockRow {
 
 type SortKey = 'shortName' | 'price' | 'changePercent' | 'volume' | 'marketCap';
 type SortOrder = 'asc' | 'desc';
-type ChangePeriod = 'day' | 'week' | 'month';
+type ChangePeriod = 'day' | 'week' | 'month' | 'year' | '5year' | '10year';
 
 interface MarketTableProps {
   stocks: StockRow[];
@@ -147,7 +147,7 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
   }
 
   // Get label for change column based on period
-  const changeLabel = changePeriod === 'day' ? '1D' : changePeriod === 'week' ? '1W' : '1M';
+  const changeLabel = changePeriod === 'day' ? '1D' : changePeriod === 'week' ? '1W' : changePeriod === 'month' ? '1M' : changePeriod === 'year' ? '1Y' : changePeriod === '5year' ? '5Y' : '10Y';
 
   return (
     <div className="flex flex-col h-full">
@@ -163,22 +163,27 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
           className="flex rounded-lg overflow-hidden"
           style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
         >
-          {(['day', 'week', 'month'] as ChangePeriod[]).map((period) => (
+          {(['day', 'week', 'month', 'year', '5year', '10year'] as ChangePeriod[]).map((period) => (
             <button
               key={period}
               onClick={() => setChangePeriod(period)}
-              className="px-3 py-1.5 text-xs font-semibold transition-colors"
+              className="px-2 sm:px-3 py-1.5 text-xs font-semibold transition-colors"
               style={{
                 backgroundColor: changePeriod === period ? 'var(--accent-blue)' : 'transparent',
                 color: changePeriod === period ? 'white' : 'var(--text-secondary)',
               }}
             >
-              {period === 'day' ? '1 Day' : period === 'week' ? '1 Week' : '1 Month'}
+              {period === 'day' ? '1D' : period === 'week' ? '1W' : period === 'month' ? '1M' : period === 'year' ? '1Y' : period === '5year' ? '5Y' : '10Y'}
             </button>
           ))}
         </div>
         {isLiveLoading && (
-          <Loader2 size={14} className="animate-spin" style={{ color: 'var(--accent-blue)' }} />
+          <div className="flex items-center gap-1.5">
+            <Loader2 size={14} className="animate-spin" style={{ color: 'var(--accent-blue)' }} />
+            <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
+              Loading...
+            </span>
+          </div>
         )}
       </div>
 
@@ -232,6 +237,12 @@ Red bar = Stock is near its 52-week LOW"
                   changePercent = live.changePercentWeek ?? changePercent;
                 } else if (changePeriod === 'month') {
                   changePercent = live.changePercentMonth ?? changePercent;
+                } else if (changePeriod === 'year') {
+                  changePercent = live.changePercentYear ?? changePercent;
+                } else if (changePeriod === '5year') {
+                  changePercent = live.changePercent5Year ?? changePercent;
+                } else if (changePeriod === '10year') {
+                  changePercent = live.changePercent10Year ?? changePercent;
                 }
               }
               const isPositive = changePercent >= 0;
@@ -287,12 +298,20 @@ Red bar = Stock is near its 52-week LOW"
 
                   {/* Change */}
                   <div className="text-right whitespace-nowrap">
-                    <span
-                      className="font-semibold text-xs sm:text-sm"
-                      style={{ color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}
-                    >
-                      {formatPercent(changePercent)}
-                    </span>
+                    {!live && changePeriod !== 'day' ? (
+                      // Show skeleton for non-day periods until live data loads
+                      <div
+                        className="inline-block w-12 h-4 rounded animate-pulse"
+                        style={{ backgroundColor: 'var(--bg-secondary)' }}
+                      />
+                    ) : (
+                      <span
+                        className="font-semibold text-xs sm:text-sm"
+                        style={{ color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}
+                      >
+                        {formatPercent(changePercent)}
+                      </span>
+                    )}
                   </div>
 
                   {/* 52W Position - always show bar for consistent alignment, hidden on mobile */}
